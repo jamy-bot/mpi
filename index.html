@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPI* Performance Tracker — Tableau de bord prépa scientifique</title>
+<meta name="description" content="MPI* Performance Tracker : minuteur, pomodoros du soir à durées variables (19h50 – 00h45), conseils de pause, quotas hebdomadaires, ambiances de concentration et carnet d'erreurs pour MPI* / MP2I.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+      }
+    }
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+:root{
+  --bg:#f6f8fc;
+  --card:#ffffff;
+  --line:#e5eaf2;
+  --line-strong:#d6deea;
+  --ink:#0f172a;
+  --muted:#64748b;
+  --indigo:#4f46e5;
+  --sky:#0284c7;
+  --teal:#0d9488;
+  --amber:#d97706;
+  --rose:#e11d48;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{ -webkit-tap-highlight-color: transparent; }
+html{ scroll-padding-top: 90px; }
+body{
+  background:
+    radial-gradient(900px 520px at 88% -6%, rgba(79,70,229,.07), transparent 62%),
+    radial-gradient(800px 480px at 0% 8%, rgba(13,148,136,.06), transparent 60%),
+    var(--bg);
+  color:#334155;
+  font-family:'Inter',system-ui,sans-serif;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:rgba(79,70,229,.16); color:#0f172a; }
+
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:#f1f4f9; }
+::-webkit-scrollbar-thumb{ background:#cfd8e5; border-radius:99px; border:2px solid #f1f4f9; }
+::-webkit-scrollbar-thumb:hover{ background:#b6c2d3; }
+
+#scrollProgress{ position:fixed; top:0; left:0; height:2px; width:100%; transform:scaleX(0); transform-origin:0 50%; background:linear-gradient(90deg,var(--indigo),var(--sky),var(--teal)); z-index:80; }
+
+/* Grid backdrop */
+.grid-bg{
+  background-image:
+    linear-gradient(rgba(15,23,42,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,23,42,.035) 1px, transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+          mask-image:radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%);
+}
+
+/* Reveal */
+.js .reveal{ opacity:0; transform:translateY(18px); transition:opacity .8s var(--ease), transform .8s var(--ease); }
+.js .reveal.in{ opacity:1; transform:none; }
+.kin{ display:inline-block; overflow:hidden; vertical-align:bottom; padding-bottom:.08em; }
+.kin span{ display:inline-block; transform:translateY(110%); transition:transform 1s var(--ease); }
+.kin.in span{ transform:translateY(0); }
+
+.img-mask{ overflow:hidden; position:relative; }
+.js .img-mask img{ transform:scale(1.08); transition:transform 1.4s var(--ease); }
+.js .img-mask.in img{ transform:scale(1); }
+
+/* Cards */
+.cardx{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:22px;
+  position:relative;
+  transition:transform .45s var(--ease), border-color .4s ease, box-shadow .45s var(--ease);
+  box-shadow:0 1px 2px rgba(15,23,42,.04), 0 14px 34px -22px rgba(15,23,42,.18);
+}
+.cardx.lift:hover{ transform:translateY(-4px); border-color:#cdd6f6; box-shadow:0 1px 2px rgba(15,23,42,.04), 0 26px 50px -26px rgba(79,70,229,.28); }
+
+.eyebrow{ font-size:11px; letter-spacing:.24em; text-transform:uppercase; font-weight:600; }
+
+/* Buttons */
+.btn{ position:relative; display:inline-flex; align-items:center; justify-content:center; gap:.55rem; font-weight:600; letter-spacing:.005em; border-radius:12px; transition:transform .3s var(--ease), box-shadow .3s var(--ease), background .3s ease, color .3s ease, border-color .3s ease; white-space:nowrap; }
+.btn-primary{ background:linear-gradient(135deg,#4f46e5 0%,#2563eb 55%,#0284c7 100%); color:#fff; box-shadow:0 10px 24px -12px rgba(79,70,229,.6); }
+.btn-primary:hover{ transform:translateY(-2px); box-shadow:0 16px 32px -14px rgba(79,70,229,.7); }
+.btn-ghost{ background:#fff; color:#334155; border:1px solid var(--line-strong); }
+.btn-ghost:hover{ transform:translateY(-2px); border-color:#a5b4fc; color:#3730a3; background:#f5f6ff; }
+.btn-soft{ background:#eef2ff; color:#4338ca; border:1px solid #e0e7ff; }
+.btn-soft:hover{ background:#e0e7ff; transform:translateY(-1px); }
+.btn:active{ transform:translateY(0) scale(.985); }
+
+/* Header */
+header#top{ background:rgba(246,248,252,.72); backdrop-filter:blur(14px) saturate(160%); -webkit-backdrop-filter:blur(14px) saturate(160%); border-bottom:1px solid transparent; transition:background .35s ease, border-color .35s ease, box-shadow .35s ease; }
+header#top.scrolled{ background:rgba(255,255,255,.9); border-bottom-color:var(--line); box-shadow:0 10px 30px -24px rgba(15,23,42,.3); }
+.nav-link{ position:relative; color:#64748b; font-size:.86rem; font-weight:500; transition:color .25s ease; }
+.nav-link::after{ content:""; position:absolute; left:0; bottom:-6px; height:2px; width:100%; border-radius:2px; background:linear-gradient(90deg,var(--indigo),var(--teal)); transform:scaleX(0); transform-origin:right; transition:transform .4s var(--ease); }
+.nav-link:hover{ color:#0f172a; }
+.nav-link:hover::after{ transform:scaleX(1); transform-origin:left; }
+
+.status-pill{ display:inline-flex; align-items:center; gap:.5rem; padding:.42rem .8rem; border-radius:999px; border:1px solid var(--line-strong); background:#fff; font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:#64748b; transition:all .35s ease; font-weight:600; }
+.status-pill.linked{ border-color:#a7f3d0; color:#047857; background:#ecfdf5; }
+.dot{ width:8px; height:8px; border-radius:99px; background:#94a3b8; }
+.status-pill.linked .dot{ background:#10b981; animation:pulseDot 2.4s ease-in-out infinite; }
+@keyframes pulseDot{ 0%,100%{ box-shadow:0 0 0 3px rgba(16,185,129,.18); } 50%{ box-shadow:0 0 0 7px rgba(16,185,129,0); } }
+
+/* Gradient text (static, non distracting) */
+.grad-text{ background:linear-gradient(100deg,#4f46e5 0%, #2563eb 45%, #0d9488 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+.chip{ display:inline-flex; align-items:center; gap:.55rem; padding:.5rem .9rem; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:.78rem; color:#475569; transition:all .35s var(--ease); box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.stat{ border-radius:16px; border:1px solid var(--line); background:#fff; padding:.9rem 1rem; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.num-mono{ font-family:'JetBrains Mono',monospace; }
+
+/* Timer */
+.ring-wrap{ position:relative; width:min(310px, 78vw); aspect-ratio:1; margin-inline:auto; }
+.ring-wrap svg{ width:100%; height:100%; transform:rotate(-90deg); }
+.ring-bg{ fill:none; stroke:#eef1f7; stroke-width:12; }
+.ring-fg{ fill:none; stroke-width:12; stroke-linecap:round; transition:stroke-dashoffset .3s linear; }
+.ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:.4rem; }
+.timer-digits{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:clamp(2.4rem, 9vw, 3.5rem); letter-spacing:-.02em; color:#0f172a; line-height:1; }
+.preset{ padding:.6rem 1rem; border-radius:11px; font-size:.8rem; font-weight:600; border:1px solid var(--line-strong); background:#fff; color:#64748b; transition:all .3s var(--ease); }
+.preset:hover{ color:#0f172a; border-color:#a5b4fc; transform:translateY(-1px); }
+.preset.active{ background:#eef2ff; color:#3730a3; border-color:#a5b4fc; box-shadow:0 8px 20px -14px rgba(79,70,229,.7); }
+.preset.pause.active{ background:#ecfdf5; color:#047857; border-color:#6ee7b7; box-shadow:0 8px 20px -14px rgba(16,185,129,.7); }
+
+/* Selects & range */
+select.styled{ appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg,transparent 50%,#94a3b8 50%),linear-gradient(135deg,#94a3b8 50%,transparent 50%); background-position:calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size:6px 6px, 6px 6px; background-repeat:no-repeat; padding-right:2.6rem; background-color:#fff; border:1px solid var(--line-strong); color:#0f172a; transition:all .3s ease; }
+select.styled:focus{ outline:none; border-color:#a5b4fc; box-shadow:0 0 0 4px rgba(79,70,229,.1); }
+input[type="range"]{ -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:99px; background:linear-gradient(90deg,var(--indigo) var(--fill,35%), #e5eaf2 var(--fill,35%)); outline:none; }
+input[type="range"]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:#fff; border:3px solid var(--indigo); cursor:pointer; box-shadow:0 4px 12px rgba(79,70,229,.35); transition:transform .2s var(--ease); }
+input[type="range"]::-webkit-slider-thumb:hover{ transform:scale(1.12); }
+input[type="range"]::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:#fff; border:3px solid var(--indigo); cursor:pointer; }
+
+/* Checkbox */
+.cbx{ position:relative; width:24px; height:24px; flex:none; }
+.cbx input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; z-index:2; }
+.cbx .box{ position:absolute; inset:0; border-radius:8px; border:1.6px solid #cbd5e1; background:#fff; transition:all .3s var(--ease); }
+.cbx .box svg{ position:absolute; inset:0; margin:auto; width:14px; height:14px; stroke:#fff; stroke-width:3.2; fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:22; stroke-dashoffset:22; transition:stroke-dashoffset .3s var(--ease) .05s; }
+.cbx input:checked + .box{ background:linear-gradient(135deg,#4f46e5,#0d9488); border-color:transparent; box-shadow:0 6px 16px -8px rgba(79,70,229,.7); }
+.cbx input:checked + .box svg{ stroke-dashoffset:0; }
+.cbx input:focus-visible + .box{ box-shadow:0 0 0 4px rgba(79,70,229,.18); }
+
+/* Timeline */
+.tl{ position:relative; }
+.tl::before{ content:""; position:absolute; left:74px; top:10px; bottom:10px; width:2px; background:linear-gradient(180deg,#e0e7ff,#e5eaf2 40%,#ccfbf1); border-radius:2px; }
+.tl-item{ position:relative; display:grid; grid-template-columns:62px 1fr; gap:26px; padding:6px 0; }
+.tl-time{ text-align:right; padding-top:14px; }
+.tl-dot{ position:absolute; left:69px; top:22px; width:12px; height:12px; border-radius:99px; background:#fff; border:2.5px solid var(--c, #4f46e5); z-index:1; transition:all .3s ease; }
+.tl-item.break .tl-dot{ width:10px; height:10px; left:70px; top:20px; border-color:#94d5b9; border-width:2px; }
+.tl-card{ border-radius:16px; border:1px solid var(--line); background:#fff; padding:1rem 1.1rem; transition:all .4s var(--ease); }
+.tl-item.work .tl-card:hover{ border-color:#c7d2fe; box-shadow:0 14px 30px -22px rgba(79,70,229,.45); }
+.tl-item.break .tl-card{ background:#f4fbf8; border-color:#d5efe4; border-style:dashed; padding:.8rem 1rem; }
+.tl-item.long .tl-card{ background:linear-gradient(135deg,#f0fdf8,#f5f7ff); border-style:solid; border-color:#cdeee0; }
+.tl-item.done .tl-card{ background:#f8fafc; }
+.tl-item.done .tl-title{ color:#94a3b8; text-decoration:line-through; text-decoration-color:#cbd5e1; }
+.tl-item.done .tl-dot{ background:var(--c); }
+.tl-item.current .tl-card{ border-color:var(--c); box-shadow:0 0 0 4px color-mix(in srgb, var(--c) 12%, transparent), 0 18px 34px -24px rgba(15,23,42,.35); }
+.tl-item.break.current .tl-card{ border-color:#34d399; box-shadow:0 0 0 4px rgba(52,211,153,.14); }
+.tl-item.current .tl-dot{ box-shadow:0 0 0 5px color-mix(in srgb, var(--c) 18%, transparent); }
+.now-badge{ display:none; font-size:10px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; padding:.2rem .55rem; border-radius:99px; background:var(--c); color:#fff; }
+.tl-item.break .now-badge{ background:#10b981; }
+.tl-item.current .now-badge{ display:inline-block; }
+.subj{ font-size:10px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; padding:.22rem .55rem; border-radius:99px; background:color-mix(in srgb, var(--c) 10%, white); color:var(--c); border:1px solid color-mix(in srgb, var(--c) 22%, white); white-space:nowrap; }
+.load{ display:inline-flex; gap:3px; }
+.load i{ width:6px; height:6px; border-radius:2px; background:#e2e8f0; }
+.load i.on{ background:var(--c); }
+@media (max-width:520px){
+  .tl::before{ left:52px; }
+  .tl-item{ grid-template-columns:44px 1fr; gap:20px; }
+  .tl-dot{ left:47px; }
+  .tl-item.break .tl-dot{ left:48px; }
+}
+
+/* Quota */
+.quota-bar{ height:8px; border-radius:99px; background:#eef1f7; overflow:hidden; }
+.quota-fill{ height:100%; width:0%; border-radius:99px; background:linear-gradient(90deg, var(--c), color-mix(in srgb, var(--c) 55%, white)); transition:width .7s var(--ease); }
+.step-btn{ width:36px; height:36px; border-radius:10px; display:grid; place-items:center; border:1px solid var(--line-strong); background:#fff; color:#475569; font-size:1.1rem; font-weight:600; line-height:1; transition:all .25s var(--ease); }
+.step-btn:hover{ transform:translateY(-2px); border-color:var(--c); color:var(--c); }
+.step-btn:active{ transform:scale(.92); }
+.ring-mini circle{ transition:stroke-dashoffset .8s var(--ease); }
+
+/* Memo */
+.memo-item{ display:flex; align-items:flex-start; gap:.9rem; padding:.95rem 1.05rem; border-radius:14px; border:1px solid var(--line); background:#fff; transition:all .4s var(--ease); }
+.memo-item:hover{ border-color:#c7d2fe; }
+.memo-item.removing{ opacity:0; transform:translateX(24px) scale(.97); }
+.tag{ font-size:.64rem; letter-spacing:.08em; text-transform:uppercase; font-weight:700; padding:.24rem .6rem; border-radius:999px; white-space:nowrap; }
+.tag-astuce{ background:#eef2ff; color:#4338ca; border:1px solid #e0e7ff; }
+.tag-erreur{ background:#fff1f2; color:#be123c; border:1px solid #ffe4e6; }
+.tag-concours{ background:#fffbeb; color:#b45309; border:1px solid #fef3c7; }
+.inputx{ width:100%; background:#fff; border:1px solid var(--line-strong); border-radius:12px; padding:.85rem 1rem; color:#0f172a; font-size:.92rem; transition:all .3s var(--ease); }
+.inputx::placeholder{ color:#94a3b8; }
+.inputx:focus{ outline:none; border-color:#a5b4fc; box-shadow:0 0 0 4px rgba(79,70,229,.1); }
+
+/* Tips */
+.tip-card{ border-radius:18px; border:1px solid var(--line); background:#fff; padding:1.35rem; transition:all .4s var(--ease); }
+.tip-card:hover{ transform:translateY(-3px); border-color:color-mix(in srgb, var(--c) 35%, white); box-shadow:0 18px 36px -26px color-mix(in srgb, var(--c) 70%, transparent); }
+.tip-ico{ width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:color-mix(in srgb, var(--c) 10%, white); color:var(--c); }
+.tip-fade{ transition:opacity .35s ease, transform .35s var(--ease); }
+.tip-fade.out{ opacity:0; transform:translateY(6px); }
+
+/* Chart */
+.bar{ transition:height .9s var(--ease), y .9s var(--ease); }
+.chart-grid line{ stroke:#eef1f7; stroke-width:1; }
+
+/* Banner & Toast */
+#weekBanner{ position:fixed; left:50%; top:84px; z-index:70; width:min(540px, calc(100% - 2rem)); transform:translate(-50%,-20px); opacity:0; pointer-events:none; transition:opacity .5s var(--ease), transform .6s var(--ease); }
+#weekBanner.show{ opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+#toastWrap{ position:fixed; right:18px; bottom:22px; z-index:90; display:flex; flex-direction:column; gap:.6rem; align-items:flex-end; pointer-events:none; }
+.toast{ display:flex; align-items:center; gap:.7rem; padding:.8rem 1.1rem; background:#fff; border:1px solid var(--line); border-radius:13px; font-size:.84rem; color:#1e293b; box-shadow:0 18px 40px -18px rgba(15,23,42,.35); transform:translateY(14px) scale(.97); opacity:0; transition:all .4s var(--ease); max-width:min(92vw, 380px); }
+.toast.show{ transform:none; opacity:1; }
+.saved-flash{ animation:flashSave .9s ease; }
+@keyframes flashSave{ 0%{ box-shadow:0 0 0 0 rgba(16,185,129,.45); } 100%{ box-shadow:0 0 0 16px rgba(16,185,129,0); } }
+
+.divider{ height:1px; width:100%; background:linear-gradient(90deg, transparent, #dbe2ee, transparent); }
+
+#mobileNav{ max-height:0; overflow:hidden; transition:max-height .45s var(--ease); }
+#mobileNav.open{ max-height:420px; }
+
+@media (max-width: 767px){ .cardx.lift:hover, .tip-card:hover{ transform:none; } }
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.15s !important; scroll-behavior:auto !important; }
+  .js .reveal{ opacity:1 !important; transform:none !important; }
+  .kin span{ transform:none !important; }
+}
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<div id="scrollProgress"></div>
+
+<!-- ================= HEADER ================= -->
+<header id="top" class="fixed top-0 inset-x-0 z-50">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between gap-3 py-3">
+      <a href="#hero" class="flex items-center gap-3 shrink-0">
+        <div class="w-10 h-10 rounded-[12px] grid place-items-center shadow-md shadow-indigo-500/20" style="background:linear-gradient(140deg,#4f46e5,#2563eb 55%,#0d9488);">
+          <span class="font-display font-bold text-[15px] text-white tracking-tight">M*</span>
+        </div>
+        <div class="leading-tight">
+          <div class="font-display font-semibold text-[15px] sm:text-[16px] text-slate-900 tracking-tight">MPI<span class="text-indigo-600">*</span> Performance</div>
+          <div class="text-[10px] tracking-[.18em] uppercase text-slate-400 font-medium hidden sm:block">Prépa · MP2I / MPI*</div>
+        </div>
+      </a>
+
+      <nav class="hidden lg:flex items-center gap-7">
+        <a href="#timer" class="nav-link">Minuteur</a>
+        <a href="#quotas" class="nav-link">Quotas</a>
+        <a href="#evening" class="nav-link">Soirée</a>
+        <a href="#breaks" class="nav-link">Pauses</a>
+        <a href="#memo" class="nav-link">Carnet</a>
+        <a href="#history" class="nav-link">Historique</a>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <div id="fileStatus" class="status-pill hidden md:inline-flex"><span class="dot"></span><span id="fileStatusText">Non lié</span></div>
+        <button id="btnLink" class="btn btn-primary px-3.5 sm:px-4 py-2.5 text-[12.5px]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          <span class="hidden sm:inline">Lier un fichier</span><span class="sm:hidden">Lier</span>
+        </button>
+        <button id="btnDownload" class="btn btn-ghost px-3 py-2.5 text-[12.5px]" title="Télécharger une copie JSON">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+          <span class="hidden xl:inline">Copie</span>
+        </button>
+        <button id="menuBtn" class="btn btn-ghost lg:hidden w-[42px] h-[42px] !p-0" aria-label="Menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobileNav" class="lg:hidden">
+      <div class="grid grid-cols-2 gap-2 pb-4">
+        <a href="#timer" class="btn btn-ghost py-3 text-[13px]">Minuteur</a>
+        <a href="#quotas" class="btn btn-ghost py-3 text-[13px]">Quotas</a>
+        <a href="#evening" class="btn btn-ghost py-3 text-[13px]">Soirée</a>
+        <a href="#breaks" class="btn btn-ghost py-3 text-[13px]">Pauses</a>
+        <a href="#memo" class="btn btn-ghost py-3 text-[13px]">Carnet</a>
+        <a href="#history" class="btn btn-ghost py-3 text-[13px]">Historique</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= WEEK BANNER ================= -->
+<div id="weekBanner" class="rounded-2xl bg-white" style="border:1px solid #c7d2fe; box-shadow:0 28px 60px -28px rgba(79,70,229,.45);">
+  <div class="p-5 flex items-start gap-4">
+    <div class="w-11 h-11 rounded-xl grid place-items-center flex-none bg-indigo-50 text-indigo-600">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+    </div>
+    <div class="flex-1">
+      <div class="font-display font-semibold text-slate-900 text-[15px]">Nouvelle semaine détectée</div>
+      <p class="text-slate-500 text-[13px] mt-1 leading-relaxed">Les quotas de la semaine précédente ont été archivés puis remis à zéro. Bienvenue en semaine <span id="bannerWeek" class="text-indigo-600 font-mono font-semibold">—</span>.</p>
+    </div>
+    <button id="bannerClose" class="text-slate-400 hover:text-slate-700 transition-colors p-1" aria-label="Fermer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ================= HERO ================= -->
+<section id="hero" class="relative pt-[104px] sm:pt-[124px] pb-16 sm:pb-24 overflow-hidden">
+  <div class="absolute inset-0 grid-bg -z-10"></div>
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid lg:grid-cols-[1.12fr_.88fr] gap-12 lg:gap-16 items-center">
+      <div>
+        <div class="chip reveal mb-7">
+          <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+          <span class="num-mono text-slate-500">Semaine <span id="heroWeek" class="text-slate-900 font-semibold">—</span></span>
+          <span class="w-px h-4 bg-slate-200"></span>
+          <span class="text-slate-500">Série : <span class="num-mono font-bold text-indigo-600" id="heroStreak">0</span> jours</span>
+        </div>
+
+        <h1 class="font-display font-bold text-slate-900 leading-[1.03] tracking-[-.032em] text-[clamp(2.4rem,7vw,4.4rem)]">
+          <span class="kin"><span>Travaillez</span></span>
+          <span class="kin"><span style="transition-delay:.08s">moins,</span></span><br>
+          <span class="kin"><span class="grad-text" style="transition-delay:.16s">performez</span></span>
+          <span class="kin"><span class="grad-text" style="transition-delay:.24s">mieux.</span></span>
+        </h1>
+
+        <p class="mt-6 text-[17px] sm:text-[18.5px] text-slate-500 leading-[1.72] max-w-[590px] reveal">
+          Le tableau de bord des étudiants en <strong class="text-slate-800 font-semibold">MPI* / MP2I</strong> : pomodoros du soir à durées décroissantes de <span class="num-mono text-slate-800">19:50</span> à <span class="num-mono text-slate-800">00:45</span>, matières ordonnées contre la fatigue cognitive, et conseils concrets pour chaque pause.
+        </p>
+
+        <div class="mt-8 flex flex-wrap gap-3 reveal">
+          <a href="#evening" class="btn btn-primary px-6 py-3.5 text-[15px]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+            Voir le programme du soir
+          </a>
+          <button id="heroStart" class="btn btn-ghost px-6 py-3.5 text-[15px]">
+            Session 20 min
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <div class="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-[660px]">
+          <div class="stat reveal">
+            <div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Exercices</div>
+            <div class="num-mono text-[19px] font-bold text-slate-900 mt-1"><span id="statWeek">0</span><span class="text-slate-300 text-[13px]"> / <span id="statTarget">21</span></span></div>
+          </div>
+          <div class="stat reveal">
+            <div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Focus</div>
+            <div class="num-mono text-[19px] font-bold text-slate-900 mt-1"><span id="statFocus">0</span><span class="text-slate-300 text-[13px]"> min</span></div>
+          </div>
+          <div class="stat reveal">
+            <div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Ce soir</div>
+            <div class="num-mono text-[19px] font-bold text-slate-900 mt-1"><span id="statTonight">0</span><span class="text-slate-300 text-[13px]"> / 6</span></div>
+          </div>
+          <div class="stat reveal">
+            <div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Carnet</div>
+            <div class="num-mono text-[19px] font-bold text-slate-900 mt-1"><span id="statMemo">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative reveal">
+        <div class="img-mask rounded-[26px] overflow-hidden" style="border:1px solid var(--line); box-shadow:0 40px 80px -40px rgba(15,23,42,.35);">
+          <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=1100&q=80" alt="Étudiant en travail de concentration" class="w-full h-[400px] sm:h-[500px] object-cover">
+        </div>
+        <div class="absolute -left-3 sm:-left-8 bottom-7 w-[250px] rounded-2xl p-4 bg-white/95 backdrop-blur" style="border:1px solid var(--line); box-shadow:0 24px 50px -24px rgba(15,23,42,.35);">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl grid place-items-center bg-indigo-50 text-indigo-600">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </div>
+            <div class="min-w-0">
+              <div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold" id="heroNowLabel">Programme du soir</div>
+              <div class="text-slate-900 font-semibold text-[13.5px] truncate" id="heroNowTitle">Début à 19:50</div>
+            </div>
+          </div>
+          <div class="mt-3.5 quota-bar"><div class="quota-fill" id="heroNowBar" style="--c:#4f46e5; width:0%;"></div></div>
+          <div class="mt-2 text-[11px] text-slate-400 num-mono" id="heroNowMeta">19:50 → 00:45</div>
+        </div>
+        <div class="absolute -right-2 top-6 rounded-2xl px-4 py-3 bg-white/95 backdrop-blur" style="border:1px solid #bbf7d0; box-shadow:0 18px 40px -22px rgba(16,185,129,.4);">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <div>
+              <div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Sauvegarde</div>
+              <div class="text-[13px] text-emerald-700 font-semibold" id="heroSaveState">Locale sécurisée</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8"><div class="divider"></div></div>
+
+<!-- ================= TIMER ================= -->
+<section id="timer" class="py-20 sm:py-24">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12">
+      <div class="max-w-[620px]">
+        <div class="flex items-center gap-3 mb-4 reveal"><span class="w-8 h-px bg-indigo-400"></span><span class="eyebrow text-indigo-600">01 — Minuteur</span></div>
+        <h2 class="font-display font-bold text-slate-900 text-[clamp(2rem,5vw,3.1rem)] leading-[1.1] tracking-[-.028em] reveal">Un bloc, <span class="grad-text">une seule tâche</span></h2>
+        <p class="mt-5 text-[16.5px] text-slate-500 leading-[1.75] reveal">Choisissez un format ou lancez directement un bloc du programme du soir. À zéro, une pause vous est proposée avec un conseil adapté.</p>
+      </div>
+      <div class="flex flex-wrap gap-3 reveal">
+        <div class="stat flex items-center gap-3 !px-5">
+          <div class="w-9 h-9 rounded-xl grid place-items-center bg-indigo-50 text-indigo-600"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <div><div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Sessions du soir</div><div class="num-mono text-slate-900 font-bold text-[16px]" id="todaySessions">0</div></div>
+        </div>
+        <div class="stat flex items-center gap-3 !px-5">
+          <div class="w-9 h-9 rounded-xl grid place-items-center bg-teal-50 text-teal-600"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+          <div><div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Temps total</div><div class="num-mono text-slate-900 font-bold text-[16px]" id="totalFocus">0 min</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-[1.05fr_.95fr] gap-6">
+      <!-- Timer -->
+      <div class="cardx p-6 sm:p-9">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div class="eyebrow text-slate-400 !tracking-[.2em]">Chronomètre</div>
+            <div class="font-display text-slate-900 text-[19px] mt-1 font-semibold" id="timerModeTitle">Mode exercice</div>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200">
+            <span class="w-2 h-2 rounded-full" id="timerDot" style="background:#94a3b8;"></span>
+            <span class="text-[10.5px] tracking-[.16em] uppercase text-slate-500 font-semibold" id="timerState">En attente</span>
+          </div>
+        </div>
+
+        <div class="ring-wrap mt-8">
+          <svg viewBox="0 0 260 260" aria-hidden="true">
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4f46e5"/><stop offset="55%" stop-color="#2563eb"/><stop offset="100%" stop-color="#0d9488"/></linearGradient>
+              <linearGradient id="ringGradPause" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#0d9488"/></linearGradient>
+            </defs>
+            <circle class="ring-bg" cx="130" cy="130" r="112"/>
+            <circle class="ring-fg" id="ringFg" cx="130" cy="130" r="112" stroke="url(#ringGrad)" stroke-dasharray="703.72" stroke-dashoffset="0"/>
+          </svg>
+          <div class="ring-center">
+            <div class="timer-digits" id="timerDisplay">20:00</div>
+            <div class="text-[10px] tracking-[.22em] uppercase text-slate-400 font-semibold px-6" id="timerSubtitle">Règle des 20 minutes</div>
+            <div class="num-mono text-[11px] text-indigo-500 mt-1" id="timerSessionCount">Session 0 · Semaine —</div>
+          </div>
+        </div>
+
+        <div class="mt-8 flex flex-wrap justify-center gap-2">
+          <button class="preset active" data-seconds="1200" data-kind="work" data-mode="Mode exercice" data-sub="Règle des 20 minutes">20 min · Exercice</button>
+          <button class="preset" data-seconds="2400" data-kind="work" data-mode="Cours / Feuille blanche" data-sub="Reconstruction active">40 min · Cours</button>
+          <button class="preset" data-seconds="12600" data-kind="work" data-mode="Plafond DM" data-sub="Bloc long format">3 h 30 · DM</button>
+          <button class="preset pause" data-seconds="300" data-kind="break" data-mode="Pause courte" data-sub="Récupération active">5 min · Pause</button>
+          <button class="preset pause" data-seconds="600" data-kind="break" data-mode="Pause longue" data-sub="Récupération active">10 min · Pause</button>
+        </div>
+
+        <div class="mt-7 grid grid-cols-2 gap-3">
+          <button id="btnStartPause" class="btn btn-primary py-3.5 text-[15px]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M7 4.6c0-.9 1-1.5 1.8-1L19.2 10c.8.5.8 1.6 0 2.1L8.8 18.5c-.8.5-1.8-.1-1.8-1V4.6z"/></svg>
+            <span id="startPauseLabel">Démarrer</span>
+          </button>
+          <button id="btnReset" class="btn btn-ghost py-3.5 text-[15px]">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Réinitialiser
+          </button>
+        </div>
+
+        <!-- Break tip inside timer -->
+        <div id="timerTip" class="mt-6 p-4 rounded-2xl" style="background:#f4fbf8; border:1px solid #d5efe4;">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-xl grid place-items-center flex-none bg-white text-emerald-600 border border-emerald-100" id="timerTipIco">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2"/><path d="M10 2v2"/><path d="M14 2v2"/></svg>
+            </div>
+            <div class="flex-1 tip-fade" id="timerTipBody">
+              <div class="text-[10px] tracking-[.16em] uppercase text-emerald-700 font-bold">Conseil de pause</div>
+              <div class="text-slate-900 font-semibold text-[14px] mt-1" id="timerTipTitle">—</div>
+              <div class="text-slate-500 text-[12.5px] mt-1 leading-relaxed" id="timerTipText">—</div>
+            </div>
+            <button id="timerTipNext" class="text-emerald-700 hover:text-emerald-900 p-1.5 rounded-lg hover:bg-white transition" title="Conseil suivant" aria-label="Conseil suivant">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+          </div>
+          <button id="timerTipStart" class="hidden mt-3.5 w-full btn py-2.5 text-[13px] text-emerald-800 bg-white border border-emerald-200 hover:bg-emerald-50">Démarrer la pause suggérée</button>
+        </div>
+
+        <div class="mt-4 flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+          <div class="flex items-center gap-3">
+            <label class="cbx"><input type="checkbox" id="linkToTimer"><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></label>
+            <div>
+              <div class="text-[13.5px] text-slate-800 font-medium">Ambiance liée au minuteur</div>
+              <div class="text-[11.5px] text-slate-500">Démarre avec un bloc de travail, coupe à 00:00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sound -->
+      <div id="sounds" class="cardx p-6 sm:p-9 flex flex-col">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="eyebrow text-slate-400 !tracking-[.2em]">02 — Ambiances</div>
+            <h3 class="font-display text-slate-900 text-[25px] leading-tight mt-2 tracking-[-.02em] font-semibold">5 ambiances générées<br class="hidden sm:block"> en temps réel</h3>
+          </div>
+          <div class="w-12 h-12 rounded-2xl grid place-items-center flex-none bg-indigo-50 text-indigo-600 border border-indigo-100">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 10v4"/><path d="M8 6v12"/><path d="M12 3v18"/><path d="M16 7v10"/><path d="M20 10v4"/></svg>
+          </div>
+        </div>
+        <p class="mt-4 text-[14px] text-slate-500 leading-[1.72]">Synthèse 100 % Web Audio API : oscillateurs et bruits filtrés, aucun fichier externe. Léger et instantané.</p>
+
+        <div class="mt-6 rounded-2xl overflow-hidden relative bg-gradient-to-b from-indigo-50/60 to-white border border-slate-200/80">
+          <canvas id="vizCanvas" style="width:100%; height:120px; display:block;"></canvas>
+          <div class="absolute top-3 left-4 text-[10px] tracking-[.18em] uppercase text-slate-400 font-semibold" id="vizLabel">Signal · en veille</div>
+        </div>
+
+        <div class="mt-6">
+          <label for="trackSelect" class="text-[11px] tracking-[.18em] uppercase text-slate-400 font-semibold">Piste</label>
+          <select id="trackSelect" class="styled mt-2 w-full px-4 py-3.5 rounded-[12px] text-[14px]">
+            <option value="gamma">1 · Ondes 40 Hz Gamma — battements binauraux</option>
+            <option value="brown">2 · Deep Brown Noise — cabine spatiale</option>
+            <option value="lofi">3 · Nappe Lo-Fi Spatiale — synthé ambient</option>
+            <option value="rain">4 · Pluie Méditative — bruit rose sculpté</option>
+            <option value="zen">5 · Harmoniques Zen 432 Hz</option>
+          </select>
+        </div>
+
+        <div class="mt-6">
+          <div class="flex items-center justify-between">
+            <label for="volumeSlider" class="text-[11px] tracking-[.18em] uppercase text-slate-400 font-semibold">Volume</label>
+            <span class="num-mono text-[12px] text-indigo-600 font-semibold" id="volValue">35 %</span>
+          </div>
+          <input type="range" id="volumeSlider" min="0" max="100" value="35" class="mt-3">
+        </div>
+
+        <div class="mt-7 flex items-center gap-3">
+          <button id="btnSoundToggle" class="btn btn-primary flex-1 py-3.5 text-[15px]">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" id="soundIcon"><path d="M7 4.6c0-.9 1-1.5 1.8-1L19.2 10c.8.5.8 1.6 0 2.1L8.8 18.5c-.8.5-1.8-.1-1.8-1V4.6z"/></svg>
+            <span id="soundLabel">Lecture</span>
+          </button>
+          <button id="btnSoundStop" class="btn btn-ghost w-[52px] h-[52px] !p-0" title="Couper le son" aria-label="Couper le son">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="3"/></svg>
+          </button>
+        </div>
+
+        <div class="mt-auto pt-6 grid grid-cols-3 gap-2.5">
+          <div class="rounded-xl px-3 py-3 text-center bg-slate-50 border border-slate-200/80"><div class="num-mono text-slate-900 text-[15px] font-bold">100%</div><div class="text-[9.5px] tracking-[.14em] uppercase text-slate-400 mt-1 font-semibold">Natif</div></div>
+          <div class="rounded-xl px-3 py-3 text-center bg-slate-50 border border-slate-200/80"><div class="num-mono text-slate-900 text-[15px] font-bold">0</div><div class="text-[9.5px] tracking-[.14em] uppercase text-slate-400 mt-1 font-semibold">Fichier MP3</div></div>
+          <div class="rounded-xl px-3 py-3 text-center bg-slate-50 border border-slate-200/80"><div class="num-mono text-slate-900 text-[15px] font-bold">5</div><div class="text-[9.5px] tracking-[.14em] uppercase text-slate-400 mt-1 font-semibold">Ambiances</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= QUOTAS ================= -->
+<section id="quotas" class="py-20 sm:py-24 bg-white/60 border-y border-slate-200/70">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12">
+      <div class="max-w-[600px]">
+        <div class="flex items-center gap-3 mb-4 reveal"><span class="w-8 h-px bg-teal-400"></span><span class="eyebrow text-teal-600">03 — Quotas hebdomadaires</span></div>
+        <h2 class="font-display font-bold text-slate-900 text-[clamp(2rem,5vw,3.1rem)] leading-[1.1] tracking-[-.028em] reveal">La régularité bat <span class="grad-text">l'intensité</span></h2>
+        <p class="mt-5 text-[16.5px] text-slate-500 leading-[1.75] reveal">Quatre matières, quatre quotas. Chaque nouvelle semaine ISO, les compteurs sont archivés puis remis à zéro automatiquement.</p>
+      </div>
+      <div class="cardx p-6 w-full lg:w-[320px] reveal">
+        <div class="flex items-center gap-5">
+          <div class="relative w-[96px] h-[96px] flex-none">
+            <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+              <defs><linearGradient id="globalGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4f46e5"/><stop offset="100%" stop-color="#0d9488"/></linearGradient></defs>
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#eef1f7" stroke-width="11"/>
+              <circle id="globalRing" cx="60" cy="60" r="50" fill="none" stroke="url(#globalGrad)" stroke-width="11" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16" style="transition:stroke-dashoffset .9s cubic-bezier(.22,1,.36,1);"/>
+            </svg>
+            <div class="absolute inset-0 grid place-items-center"><span class="num-mono text-[20px] font-bold text-slate-900" id="globalPct">0%</span></div>
+          </div>
+          <div>
+            <div class="text-[10.5px] tracking-[.18em] uppercase text-slate-400 font-semibold">Progression globale</div>
+            <div class="text-slate-900 font-display text-[21px] mt-1 leading-tight font-semibold"><span id="globalDone">0</span> <span class="text-slate-300">/</span> <span id="globalTarget">21</span></div>
+            <div class="text-[12px] text-slate-500 mt-1">exercices cette semaine</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-5" id="quotaGrid"></div>
+  </div>
+</section>
+
+<!-- ================= EVENING ================= -->
+<section id="evening" class="py-20 sm:py-24">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-[720px] mb-12">
+      <div class="flex items-center gap-3 mb-4 reveal"><span class="w-8 h-px bg-sky-400"></span><span class="eyebrow text-sky-600">04 — Programme du soir</span></div>
+      <h2 class="font-display font-bold text-slate-900 text-[clamp(2rem,5vw,3.1rem)] leading-[1.1] tracking-[-.028em] reveal">Des pomodoros <span class="grad-text">qui raccourcissent</span> avec la fatigue</h2>
+      <p class="mt-5 text-[16.5px] text-slate-500 leading-[1.75] reveal">
+        <span class="num-mono text-slate-800">19:50 → 22:45</span>, grande pause d'une heure, puis <span class="num-mono text-slate-800">23:45 → 00:45</span>. Les blocs passent de 50 à 25 minutes, et les matières alternent registres analytique, concret, algorithmique puis verbal pour éviter de solliciter toujours les mêmes ressources mentales.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-[.78fr_1.22fr] gap-8 items-start">
+      <!-- Summary -->
+      <div class="space-y-5 lg:sticky lg:top-[96px]">
+        <div class="cardx p-6 sm:p-7">
+          <div class="flex items-center justify-between">
+            <div class="eyebrow text-slate-400 !tracking-[.2em]">Maintenant</div>
+            <div class="num-mono text-[12px] text-slate-500" id="clockNow">--:--</div>
+          </div>
+          <div class="mt-3 font-display text-slate-900 text-[20px] font-semibold leading-snug" id="nowTitle">—</div>
+          <div class="text-[13px] text-slate-500 mt-1.5 leading-relaxed" id="nowMeta">—</div>
+          <div class="mt-4 quota-bar"><div class="quota-fill" id="nowBar" style="--c:#4f46e5; width:0%;"></div></div>
+          <button id="nowStart" class="btn btn-soft w-full py-3 mt-5 text-[13.5px]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.6c0-.9 1-1.5 1.8-1L19.2 10c.8.5.8 1.6 0 2.1L8.8 18.5c-.8.5-1.8-.1-1.8-1V4.6z"/></svg>
+            <span id="nowStartLabel">Lancer ce bloc dans le minuteur</span>
+          </button>
+        </div>
+
+        <div class="cardx p-6 sm:p-7">
+          <div class="flex items-center gap-5">
+            <div class="relative w-[84px] h-[84px] flex-none">
+              <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#eef1f7" stroke-width="12"/>
+                <circle id="tonightRing" cx="60" cy="60" r="50" fill="none" stroke="url(#globalGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16" style="transition:stroke-dashoffset .9s cubic-bezier(.22,1,.36,1);"/>
+              </svg>
+              <div class="absolute inset-0 grid place-items-center"><span class="num-mono text-[17px] font-bold text-slate-900"><span id="tonightDone">0</span>/6</span></div>
+            </div>
+            <div>
+              <div class="text-[10.5px] tracking-[.18em] uppercase text-slate-400 font-semibold">Blocs validés ce soir</div>
+              <div class="text-slate-900 font-display text-[19px] mt-1 font-semibold"><span id="tonightMin">0</span> <span class="text-slate-400 text-[14px] font-medium">/ 207 min</span></div>
+              <div class="text-[12px] text-slate-500 mt-1">Réinitialisé chaque jour à midi</div>
+            </div>
+          </div>
+          <div class="divider my-5"></div>
+          <div class="flex items-end justify-between gap-4">
+            <div>
+              <div class="text-[10.5px] tracking-[.18em] uppercase text-slate-400 font-semibold">Série en cours</div>
+              <div class="font-display text-slate-900 text-[36px] leading-none font-bold tracking-[-.03em] mt-2"><span id="streakValue">0</span> <span class="text-[17px] text-slate-400 font-medium">jours</span></div>
+            </div>
+            <div class="flex gap-2" style="--c:#4f46e5;">
+              <button class="step-btn" id="streakMinus" aria-label="Diminuer">−</button>
+              <button class="step-btn" id="streakPlus" aria-label="Augmenter">+</button>
+            </div>
+          </div>
+          <div class="mt-4 quota-bar"><div class="quota-fill" id="streakBar" style="--c:#4f46e5; width:0%;"></div></div>
+          <div class="text-[11.5px] text-slate-500 mt-3">+1 automatiquement quand les 6 blocs sont validés.</div>
+          <div class="flex items-center gap-2 mt-4">
+            <input type="number" id="streakInput" min="0" max="999" class="inputx !py-2.5 !text-[13px] flex-1" placeholder="Valeur exacte">
+            <button id="streakSet" class="btn btn-ghost px-4 py-2.5 text-[12.5px]">Appliquer</button>
+          </div>
+        </div>
+
+        <div class="rounded-2xl p-5 bg-sky-50/70 border border-sky-100">
+          <div class="text-[10.5px] tracking-[.16em] uppercase text-sky-700 font-bold mb-3">Logique de l'enchaînement</div>
+          <ul class="space-y-2 text-[12.8px] text-slate-600 leading-relaxed">
+            <li class="flex gap-2"><span class="text-sky-500">●</span> Le plus exigeant quand l'attention est maximale (Maths).</li>
+            <li class="flex gap-2"><span class="text-sky-500">●</span> On change de registre à chaque bloc pour limiter la saturation.</li>
+            <li class="flex gap-2"><span class="text-sky-500">●</span> Blocs et intensité décroissent ; après minuit, uniquement de la consolidation.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="cardx p-5 sm:p-8">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-6">
+          <div>
+            <div class="eyebrow text-slate-400 !tracking-[.2em]">Chronologie</div>
+            <div class="font-display text-slate-900 text-[19px] mt-1 font-semibold">6 blocs · 6 pauses · 4 h 55</div>
+          </div>
+          <div class="flex items-center gap-4 text-[11.5px] text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="load" style="--c:#4f46e5"><i class="on"></i><i class="on"></i><i></i></span>Charge cognitive</span>
+          </div>
+        </div>
+        <div class="tl" id="planList"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BREAK TIPS ================= -->
+<section id="breaks" class="py-20 sm:py-24 bg-white/60 border-y border-slate-200/70">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12">
+      <div class="max-w-[640px]">
+        <div class="flex items-center gap-3 mb-4 reveal"><span class="w-8 h-px bg-emerald-400"></span><span class="eyebrow text-emerald-600">05 — Bien faire ses pauses</span></div>
+        <h2 class="font-display font-bold text-slate-900 text-[clamp(2rem,5vw,3.1rem)] leading-[1.1] tracking-[-.028em] reveal">Une pause réussie, <span class="grad-text">c'est un bloc gagné</span></h2>
+        <p class="mt-5 text-[16.5px] text-slate-500 leading-[1.75] reveal">Le cerveau récupère quand il change vraiment d'activité. Faire défiler son téléphone n'est pas une pause : c'est une autre charge d'attention.</p>
+      </div>
+      <div class="cardx p-5 w-full lg:w-[380px] reveal" style="background:linear-gradient(135deg,#f0fdf8,#ffffff);">
+        <div class="text-[10.5px] tracking-[.16em] uppercase text-emerald-700 font-bold">Conseil du moment</div>
+        <div class="tip-fade" id="spotTipBody">
+          <div class="font-display text-slate-900 text-[17px] font-semibold mt-2" id="spotTipTitle">—</div>
+          <div class="text-slate-500 text-[13px] mt-1.5 leading-relaxed" id="spotTipText">—</div>
+        </div>
+        <button id="spotTipNext" class="mt-4 text-[12px] font-semibold text-emerald-700 hover:text-emerald-900 inline-flex items-center gap-1.5">Un autre conseil
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="tipGrid"></div>
+
+    <div class="mt-8 grid md:grid-cols-2 gap-5">
+      <div class="rounded-2xl p-6 bg-white border border-slate-200/80">
+        <div class="flex items-center gap-2.5 mb-4"><span class="w-7 h-7 rounded-lg grid place-items-center bg-emerald-50 text-emerald-600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="font-display font-semibold text-slate-900">À faire</span></div>
+        <ul class="space-y-2.5 text-[13.5px] text-slate-600">
+          <li class="flex gap-2.5"><span class="text-emerald-500 mt-0.5">✓</span>Se lever et quitter physiquement le bureau.</li>
+          <li class="flex gap-2.5"><span class="text-emerald-500 mt-0.5">✓</span>Regarder loin, par la fenêtre, pour reposer les yeux.</li>
+          <li class="flex gap-2.5"><span class="text-emerald-500 mt-0.5">✓</span>Boire de l'eau, respirer lentement.</li>
+          <li class="flex gap-2.5"><span class="text-emerald-500 mt-0.5">✓</span>Noter sur papier l'idée en suspens, puis la lâcher.</li>
+        </ul>
+      </div>
+      <div class="rounded-2xl p-6 bg-white border border-slate-200/80">
+        <div class="flex items-center gap-2.5 mb-4"><span class="w-7 h-7 rounded-lg grid place-items-center bg-rose-50 text-rose-500"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span><span class="font-display font-semibold text-slate-900">À éviter</span></div>
+        <ul class="space-y-2.5 text-[13.5px] text-slate-600">
+          <li class="flex gap-2.5"><span class="text-rose-400 mt-0.5">✕</span>Réseaux sociaux et vidéos courtes : la reprise devient difficile.</li>
+          <li class="flex gap-2.5"><span class="text-rose-400 mt-0.5">✕</span>Café ou boissons énergisantes après 17 h : elles dégradent le sommeil.</li>
+          <li class="flex gap-2.5"><span class="text-rose-400 mt-0.5">✕</span>Relire la correction pendant la pause : ce n'est plus une pause.</li>
+          <li class="flex gap-2.5"><span class="text-rose-400 mt-0.5">✕</span>Sucres rapides : coup de fouet bref, puis baisse d'énergie.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MEMO ================= -->
+<section id="memo" class="py-20 sm:py-24">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid lg:grid-cols-[.85fr_1.15fr] gap-10">
+      <div>
+        <div class="flex items-center gap-3 mb-4 reveal"><span class="w-8 h-px bg-amber-400"></span><span class="eyebrow text-amber-600">06 — Carnet</span></div>
+        <h2 class="font-display font-bold text-slate-900 text-[clamp(2rem,4.6vw,3rem)] leading-[1.1] tracking-[-.028em] reveal">Le carnet d'astuces<br>&amp; d'<span class="grad-text">erreurs de concours</span></h2>
+        <p class="mt-5 text-[16px] text-slate-500 leading-[1.78] reveal">Chaque erreur non notée est une erreur qu'on refera. Ajoutez en vitesse, relisez lors du dernier bloc (00:15 – 00:45).</p>
+        <div class="mt-8 space-y-3 reveal">
+          <div class="flex items-start gap-3.5 p-4 rounded-2xl bg-white border border-slate-200/80">
+            <div class="w-9 h-9 rounded-xl grid place-items-center flex-none bg-indigo-50"><span class="num-mono text-indigo-600 text-[13px] font-bold">01</span></div>
+            <div><div class="text-slate-900 font-medium text-[14.5px]">Notez la cause, pas le symptôme</div><div class="text-slate-500 text-[12.5px] mt-1 leading-relaxed">« Pas pensé au changement de variable » plutôt que « exercice raté ».</div></div>
+          </div>
+          <div class="flex items-start gap-3.5 p-4 rounded-2xl bg-white border border-slate-200/80">
+            <div class="w-9 h-9 rounded-xl grid place-items-center flex-none bg-teal-50"><span class="num-mono text-teal-600 text-[13px] font-bold">02</span></div>
+            <div><div class="text-slate-900 font-medium text-[14.5px]">Relisez à intervalle croissant</div><div class="text-slate-500 text-[12.5px] mt-1 leading-relaxed">J+1, J+7, J+30 : la répétition espacée ancre la méthode.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cardx p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input id="memoInput" type="text" class="inputx flex-1" placeholder="Ex. : Penser à majorer avant d'intégrer…" maxlength="180">
+          <select id="memoTag" class="styled px-4 py-3 rounded-[12px] text-[13.5px] sm:w-[165px]">
+            <option value="astuce">Astuce</option>
+            <option value="erreur">Erreur concours</option>
+            <option value="concours">À retenir</option>
+          </select>
+          <button id="memoAdd" class="btn btn-primary px-5 py-3 text-[14px]">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+            Ajouter
+          </button>
+        </div>
+        <div class="flex items-center justify-between mt-7 mb-4">
+          <div class="text-[11px] tracking-[.18em] uppercase text-slate-400 font-semibold">Entrées · <span id="memoCount" class="text-slate-700 num-mono">0</span></div>
+          <button id="memoClear" class="text-[11px] text-slate-400 hover:text-rose-500 transition-colors tracking-[.12em] uppercase font-semibold">Tout effacer</button>
+        </div>
+        <div id="memoList" class="space-y-2.5 max-h-[480px] overflow-y-auto pr-1"></div>
+        <div id="memoEmpty" class="hidden py-12 text-center">
+          <div class="w-14 h-14 rounded-2xl mx-auto grid place-items-center bg-slate-50 border border-slate-200 text-slate-400">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          </div>
+          <div class="text-slate-600 text-[14px] mt-4">Aucune entrée pour l'instant</div>
+          <div class="text-slate-400 text-[12.5px] mt-1">Ajoutez votre première astuce ci-dessus</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HISTORY ================= -->
+<section id="history" class="py-20 sm:py-24 bg-white/60 border-y border-slate-200/70">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12">
+      <div class="max-w-[600px]">
+        <div class="flex items-center gap-3 mb-4 reveal"><span class="w-8 h-px bg-indigo-400"></span><span class="eyebrow text-indigo-600">07 — Historique</span></div>
+        <h2 class="font-display font-bold text-slate-900 text-[clamp(2rem,5vw,3.1rem)] leading-[1.1] tracking-[-.028em] reveal">Vos semaines, <span class="grad-text">archivées</span></h2>
+        <p class="mt-5 text-[16.5px] text-slate-500 leading-[1.75] reveal">Chaque lundi, la semaine écoulée est figée. Repérez les creux avant qu'ils ne deviennent des trous au programme.</p>
+      </div>
+      <div class="flex gap-3 reveal">
+        <div class="stat !px-5 !py-4"><div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Moyenne 8 sem.</div><div class="num-mono text-slate-900 font-bold text-[19px] mt-1"><span id="avgWeek">0</span> ex.</div></div>
+        <div class="stat !px-5 !py-4"><div class="text-[10px] tracking-[.14em] uppercase text-slate-400 font-semibold">Meilleure</div><div class="num-mono text-slate-900 font-bold text-[19px] mt-1"><span id="bestWeek">0</span> ex.</div></div>
+      </div>
+    </div>
+
+    <div class="cardx p-6 sm:p-9">
+      <div class="flex items-start justify-between flex-wrap gap-5">
+        <div>
+          <div class="eyebrow text-slate-400 !tracking-[.2em]">Volume hebdomadaire</div>
+          <div class="font-display text-slate-900 text-[20px] mt-1.5 font-semibold">Exercices réalisés par semaine ISO</div>
+        </div>
+        <div class="flex items-center gap-5 text-[12px] text-slate-500">
+          <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-[4px]" style="background:linear-gradient(180deg,#818cf8,#4f46e5);"></span>Archivée</span>
+          <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-[4px]" style="background:linear-gradient(180deg,#5eead4,#0d9488);"></span>En cours</span>
+        </div>
+      </div>
+      <div class="mt-8 overflow-x-auto">
+        <svg id="chartSvg" viewBox="0 0 920 300" class="w-full min-w-[620px]" style="height:290px;">
+          <defs>
+            <linearGradient id="barA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4f46e5"/></linearGradient>
+            <linearGradient id="barC" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5eead4"/><stop offset="100%" stop-color="#0d9488"/></linearGradient>
+          </defs>
+          <g class="chart-grid">
+            <line x1="40" y1="30" x2="900" y2="30"/><line x1="40" y1="87" x2="900" y2="87"/><line x1="40" y1="144" x2="900" y2="144"/><line x1="40" y1="201" x2="900" y2="201"/><line x1="40" y1="258" x2="900" y2="258"/>
+          </g>
+          <g id="chartLabels" fill="#94a3b8" font-size="11" font-family="JetBrains Mono, monospace"></g>
+          <g id="chartBars"></g>
+        </svg>
+      </div>
+      <div class="mt-8 overflow-x-auto">
+        <table class="w-full text-left min-w-[540px]">
+          <thead><tr class="text-[10.5px] tracking-[.18em] uppercase text-slate-400 border-b border-slate-200"><th class="pb-3 font-semibold">Semaine</th><th class="pb-3 font-semibold">Maths</th><th class="pb-3 font-semibold">Physique</th><th class="pb-3 font-semibold">Info MPI</th><th class="pb-3 font-semibold">Français</th><th class="pb-3 font-semibold text-right">Total</th></tr></thead>
+          <tbody id="historyTable" class="text-[13.5px] text-slate-600"></tbody>
+        </table>
+        <div id="historyEmpty" class="py-10 text-center text-slate-400 text-[13.5px]">Aucune semaine archivée pour l'instant — l'historique se remplira automatiquement chaque lundi.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="py-16 sm:py-20">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="relative rounded-[28px] overflow-hidden reveal" style="background:linear-gradient(125deg,#eef2ff 0%,#f0f9ff 50%,#ecfdf5 100%); border:1px solid #dfe5f5;">
+      <div class="absolute inset-0 grid-bg opacity-70"></div>
+      <div class="relative px-7 sm:px-12 py-14 sm:py-18 grid lg:grid-cols-[1.3fr_.7fr] gap-10 items-center">
+        <div>
+          <div class="eyebrow text-indigo-600">Vos données restent chez vous</div>
+          <h2 class="font-display font-bold text-slate-900 text-[clamp(1.9rem,4.6vw,3rem)] leading-[1.1] tracking-[-.03em] mt-4">Sauvegarde physique,<br><span class="grad-text">sur votre disque dur.</span></h2>
+          <p class="mt-5 text-[16px] text-slate-600 leading-[1.78] max-w-[600px]">Liez un fichier JSON local : chaque modification y est écrite instantanément, sans serveur, sans compte, sans traçage.</p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <button id="ctaLink" class="btn btn-primary px-7 py-3.5 text-[15px]">Lier un fichier local (.json)</button>
+            <button id="ctaDownload" class="btn btn-ghost px-7 py-3.5 text-[15px]">Télécharger une copie</button>
+          </div>
+        </div>
+        <div class="hidden lg:block">
+          <div class="rounded-2xl bg-white p-5 border border-slate-200 shadow-xl shadow-indigo-900/5 num-mono text-[12px] text-slate-500 leading-[1.8]">
+            <div class="flex gap-1.5 mb-3"><span class="w-2.5 h-2.5 rounded-full bg-rose-300"></span><span class="w-2.5 h-2.5 rounded-full bg-amber-300"></span><span class="w-2.5 h-2.5 rounded-full bg-emerald-300"></span></div>
+            <div>{</div>
+            <div class="pl-4">"week": <span class="text-indigo-600">"<span id="ctaWeek">—</span>"</span>,</div>
+            <div class="pl-4">"streak": <span class="text-teal-600" id="ctaStreak">0</span>,</div>
+            <div class="pl-4">"focusMinutes": <span class="text-teal-600" id="ctaFocus">0</span>,</div>
+            <div class="pl-4">"cloud": <span class="text-rose-500">false</span></div>
+            <div>}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="pt-14 pb-10 border-t border-slate-200/80 bg-white/50">
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-[12px] grid place-items-center" style="background:linear-gradient(140deg,#4f46e5,#2563eb 55%,#0d9488);"><span class="font-display font-bold text-[15px] text-white">M*</span></div>
+          <div><div class="font-display font-semibold text-slate-900 text-[15.5px]">MPI<span class="text-indigo-600">*</span> Performance Tracker</div><div class="text-[10.5px] tracking-[.16em] uppercase text-slate-400 mt-0.5">Édition prépa scientifique</div></div>
+        </div>
+        <p class="mt-5 text-[13.5px] text-slate-500 leading-[1.8] max-w-[330px]">Un outil de suivi conçu pour les rythmes exigeants des classes MP2I, MPI et MPI*. Données locales, zéro dépendance serveur.</p>
+      </div>
+      <div>
+        <div class="text-[10.5px] tracking-[.2em] uppercase text-slate-400 font-semibold">Modules</div>
+        <ul class="mt-5 space-y-3">
+          <li><a href="#timer" class="text-[13.5px] text-slate-500 hover:text-indigo-600 transition-colors">Minuteur & ambiances</a></li>
+          <li><a href="#quotas" class="text-[13.5px] text-slate-500 hover:text-indigo-600 transition-colors">Quotas hebdomadaires</a></li>
+          <li><a href="#evening" class="text-[13.5px] text-slate-500 hover:text-indigo-600 transition-colors">Programme du soir</a></li>
+          <li><a href="#breaks" class="text-[13.5px] text-slate-500 hover:text-indigo-600 transition-colors">Conseils de pause</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-[10.5px] tracking-[.2em] uppercase text-slate-400 font-semibold">Ressources</div>
+        <ul class="mt-5 space-y-3">
+          <li><a href="#memo" class="text-[13.5px] text-slate-500 hover:text-teal-600 transition-colors">Carnet d'astuces</a></li>
+          <li><a href="#history" class="text-[13.5px] text-slate-500 hover:text-teal-600 transition-colors">Historique</a></li>
+          <li><a href="#hero" class="text-[13.5px] text-slate-500 hover:text-teal-600 transition-colors">Retour en haut</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-[10.5px] tracking-[.2em] uppercase text-slate-400 font-semibold">État du système</div>
+        <div class="mt-5 space-y-3">
+          <div class="flex items-center gap-2.5 text-[13px] text-slate-500"><span class="w-2 h-2 rounded-full" id="footDot1" style="background:#94a3b8;"></span><span id="footFileText">Sauvegarde locale</span></div>
+          <div class="flex items-center gap-2.5 text-[13px] text-slate-500"><span class="w-2 h-2 rounded-full bg-indigo-500"></span><span>Semaine <span class="num-mono text-slate-700" id="footWeek">—</span></span></div>
+          <div class="flex items-center gap-2.5 text-[13px] text-slate-500"><span class="w-2 h-2 rounded-full bg-teal-500"></span><span>Audio : Web Audio API</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-12 pt-7 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200/80">
+      <div class="text-[12px] text-slate-400">© <span id="year">2026</span> MPI* Performance Tracker — Conçu pour les étudiants en classe préparatoire scientifique.</div>
+      <div class="flex items-center gap-6">
+        <a href="#hero" class="text-[12px] text-slate-400 hover:text-slate-700 transition-colors">Mentions</a>
+        <a href="#hero" class="text-[12px] text-slate-400 hover:text-slate-700 transition-colors">Confidentialité</a>
+        <a href="#hero" class="text-[12px] text-slate-400 hover:text-slate-700 transition-colors">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<div id="toastWrap"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= UTILS ================= */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+
+/* ================= TOAST ================= */
+function toast(msg, type){
+  const colors = { ok:'#10b981', info:'#4f46e5', warn:'#d97706', err:'#e11d48' };
+  const c = colors[type] || colors.info;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = '<span style="width:8px;height:8px;border-radius:99px;flex:none;background:'+c+';box-shadow:0 0 0 4px '+c+'22;"></span><span>'+msg+'</span>';
+  $('#toastWrap').appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 450); }, 3800);
+}
+
+/* ================= DATA ================= */
+const SUBJECTS = {
+  maths:   { label:'Maths', sub:'Algèbre · Analyse · Probabilités', color:'#4f46e5', target:8 },
+  physics: { label:'Physique', sub:'Mécanique · Optique · Thermique', color:'#0284c7', target:4 },
+  info:    { label:'Info MPI', sub:'Algorithmes · OCaml · Complexité', color:'#0d9488', target:6 },
+  french:  { label:'Français / Langues', sub:'Essai · Anglais · LV2', color:'#d97706', target:3 }
+};
+
+const PLAN = [
+  { type:'work', start:'19:50', end:'20:40', min:50, c:'#4f46e5', subj:'Maths', load:3,
+    title:'Maths — exercices de fond',
+    desc:"Pic de vigilance de la soirée : la matière la plus abstraite en premier. 2 exercices type concours, sans regarder la correction avant 20 min de recherche." },
+  { type:'break', start:'20:40', end:'20:50', min:10,
+    title:'Pause active', tip:"Levez-vous et marchez 3–4 min, un grand verre d'eau. Pas de téléphone : laissez la mémoire de travail se vider." },
+  { type:'work', start:'20:50', end:'21:30', min:40, c:'#0284c7', subj:'Physique', load:3,
+    title:'Physique — problème guidé',
+    desc:"Toujours quantitatif, mais plus concret : on change de registre en gardant l'élan. Schéma et hypothèses d'abord, calcul ensuite." },
+  { type:'break', start:'21:30', end:'21:38', min:8,
+    title:'Pause yeux & posture', tip:"Règle 20-20-20 : fixez un point à 6 m pendant 20 s. Étirez nuque, épaules et poignets, puis 5 respirations lentes." },
+  { type:'work', start:'21:38', end:'22:10', min:32, c:'#0d9488', subj:'Info MPI', load:2,
+    title:'Info MPI — implémentation OCaml',
+    desc:"Modalité différente : écrire, tester, corriger. Le retour immédiat de la machine relance l'engagement quand la fatigue analytique monte." },
+  { type:'break', start:'22:10', end:'22:15', min:5,
+    title:'Micro-pause', tip:"Fermez les yeux 1 min, respiration 4-7-8 (inspirez 4 s, bloquez 7 s, expirez 8 s). Ne relisez pas votre code." },
+  { type:'work', start:'22:15', end:'22:45', min:30, c:'#d97706', subj:'Français / LV', load:2,
+    title:'Français / Langues — lecture & vocabulaire',
+    desc:"Charge verbale plutôt que logique : on sollicite d'autres ressources mentales avant la grande pause. Fiche d'œuvre ou 30 mots de vocabulaire." },
+  { type:'break', long:true, start:'22:45', end:'23:45', min:60,
+    title:'Grande pause', tip:"Dîner léger, douche tiède, 10 min de marche ou de rangement. Baissez les lumières, évitez écrans, café et sucres rapides." },
+  { type:'work', start:'23:45', end:'00:10', min:25, c:'#4f46e5', subj:'Maths', load:1,
+    title:'Maths — révision active du cours',
+    desc:"Aucune nouveauté après minuit : feuille blanche sur les définitions et théorèmes du jour. On consolide au lieu d'acquérir." },
+  { type:'break', start:'00:10', end:'00:15', min:5,
+    title:'Pause calme', tip:"Debout, quelques gorgées d'eau, lumière tamisée. Pas de défilement : préparez simplement le dernier bloc." },
+  { type:'work', start:'00:15', end:'00:45', min:30, c:'#64748b', subj:'Mixte', load:1,
+    title:'Flashcards & carnet d\u2019erreurs',
+    desc:"Récupération légère : formules de physique, relecture du carnet d'erreurs, planning du lendemain. On termine sur une tâche facile pour mieux s'endormir." }
+];
+const WORK_BLOCKS = PLAN.filter(b => b.type === 'work');
+
+const TIPS = [
+  { c:'#10b981', t:'Bougez 2 minutes', x:"Marche, escaliers, quelques squats : relancer la circulation réveille mieux qu'un écran.", i:'<path d="M13 4a2 2 0 1 0 0 .01"/><path d="m7 21 3-6 3 2v4"/><path d="m10 15-1-5 4-1 3 4h3"/>' },
+  { c:'#0284c7', t:'Règle 20-20-20', x:"Toutes les 20 min de lecture, regardez à 6 m (20 pieds) pendant 20 s pour détendre l'accommodation.", i:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>' },
+  { c:'#4f46e5', t:'Respiration lente', x:"Cinq cycles de 6 secondes (3 s inspiration, 3 s expiration) ou 4-7-8 : le rythme cardiaque se pose.", i:'<path d="M12 3v18"/><path d="M5 8c0 4 3 4 7 4s7 0 7-4"/><path d="M5 16c0-2 3-4 7-4s7 2 7 4"/>' },
+  { c:'#0d9488', t:'Hydratez-vous', x:"Une légère déshydratation suffit à réduire la concentration. Gardez une bouteille d'eau hors du bureau.", i:'<path d="M12 2.7S6 9 6 14a6 6 0 0 0 12 0c0-5-6-11.3-6-11.3Z"/>' },
+  { c:'#e11d48', t:'Téléphone hors de portée', x:"Chaque notification laisse un « résidu d'attention ». Pendant la pause, le téléphone reste dans une autre pièce.", i:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="m3 3 18 18"/>' },
+  { c:'#d97706', t:'Laissez vagabonder', x:"Regarder par la fenêtre sans but favorise l'incubation : la solution d'un exercice bloqué arrive souvent là.", i:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/>' },
+  { c:'#7c3aed', t:'Lumière chaude après 22 h', x:"Baissez l'intensité et passez en lumière chaude : l'endormissement à 01 h sera plus facile.", i:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>' },
+  { c:'#16a34a', t:'Collation intelligente', x:"Noix, fruit, yaourt plutôt que sucres rapides : énergie stable jusqu'au dernier bloc.", i:'<path d="M12 6c-2-3-7-2-7 3 0 5 4 11 7 11s7-6 7-11c0-5-5-6-7-3Z"/><path d="M12 6c0-2 1-3 3-4"/>' },
+  { c:'#0891b2', t:'Videz votre tête sur papier', x:"Notez en une ligne l'idée en suspens ou la tâche à faire : le cerveau arrête de la ressasser.", i:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>' }
+];
+
+/* ================= STATE ================= */
+const DEFAULT_STATE = {
+  version: 2, currentWeek: null, createdAt: new Date().toISOString(),
+  quotas: { maths:{done:0,target:8}, physics:{done:0,target:4}, info:{done:0,target:6}, french:{done:0,target:3} },
+  checklist: [false,false,false,false,false,false], checklistDate: null,
+  memo: [], streak: 7, lastStreakDate: null, history: [],
+  focusMinutes: 0, sessionsToday: 0, sessionsTodayDate: null, sessionCount: 0,
+  settings: { track:'gamma', volume:35, linkToTimer:true }
+};
+function mergeState(base, inc){
+  const out = JSON.parse(JSON.stringify(base));
+  if(!inc || typeof inc !== 'object') return out;
+  Object.keys(inc).forEach(k => {
+    const v = inc[k];
+    if(v === undefined) return;
+    if(k === 'quotas' && v && typeof v === 'object'){
+      Object.keys(out.quotas).forEach(q => { if(v[q]){ out.quotas[q].done = Math.max(0, Number(v[q].done) || 0); out.quotas[q].target = Number(v[q].target) || out.quotas[q].target; } });
+    } else if(k === 'checklist' && Array.isArray(v)){
+      out.checklist = [0,1,2,3,4,5].map(i => !!v[i]);
+    } else if(k === 'memo' && Array.isArray(v)){
+      out.memo = v.filter(m => m && typeof m.text === 'string').slice(0,200);
+    } else if(k === 'history' && Array.isArray(v)){
+      out.history = v.slice(-60);
+    } else if(k === 'settings' && v && typeof v === 'object'){
+      out.settings = Object.assign({}, out.settings, v);
+    } else if(k !== 'version'){
+      out[k] = v;
+    }
+  });
+  return out;
+}
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+try{ const raw = localStorage.getItem('mpi-performance-state'); if(raw) state = mergeState(DEFAULT_STATE, JSON.parse(raw)); }catch(e){}
+
+/* ================= DATES ================= */
+function isoWeek(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const week = 1 + Math.round(((d - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
+  return d.getUTCFullYear() + '-W' + pad(week);
+}
+const CURRENT_WEEK = isoWeek(new Date());
+// "Evening day" : rolls over at noon so a session crossing midnight counts as one evening
+function eveningKey(){ const d = new Date(Date.now() - 12*3600*1000); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function toMin(hhmm){ const [h,m] = hhmm.split(':').map(Number); let v = h*60+m; if(v < 720) v += 1440; return v; }
+function nowMin(){ const d = new Date(); let v = d.getHours()*60 + d.getMinutes() + d.getSeconds()/60; if(v < 720) v += 1440; return v; }
+
+/* ================= ROLLOVERS ================= */
+let weekRolled = false;
+function weekTotal(q){ return Object.keys(q).reduce((s,k) => s + (Number(q[k].done)||0), 0); }
+function checkRollovers(){
+  if(!state.currentWeek){ state.currentWeek = CURRENT_WEEK; }
+  else if(state.currentWeek !== CURRENT_WEEK){
+    const q = state.quotas;
+    state.history.push({ week: state.currentWeek, maths:q.maths.done, physics:q.physics.done, info:q.info.done, french:q.french.done, total: weekTotal(q) });
+    state.history = state.history.slice(-60);
+    Object.keys(q).forEach(k => q[k].done = 0);
+    state.currentWeek = CURRENT_WEEK;
+    weekRolled = true;
+  }
+  const ek = eveningKey();
+  if(state.checklistDate !== ek){ state.checklist = [false,false,false,false,false,false]; state.checklistDate = ek; }
+  if(state.sessionsTodayDate !== ek){ state.sessionsToday = 0; state.sessionsTodayDate = ek; }
+}
+checkRollovers();
+
+/* ================= INDEXEDDB ================= */
+let dbPromise = null;
+function idbOpen(){
+  if(dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    try{
+      const req = indexedDB.open('mpi-performance-tracker', 1);
+      req.onupgradeneeded = () => { const db = req.result; if(!db.objectStoreNames.contains('kv')) db.createObjectStore('kv'); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    }catch(e){ reject(e); }
+  });
+  return dbPromise;
+}
+async function idbSet(key, value){ try{ const db = await idbOpen(); return new Promise((res, rej) => { const tx = db.transaction('kv','readwrite'); tx.objectStore('kv').put(value, key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }catch(e){} }
+async function idbGet(key){ try{ const db = await idbOpen(); return new Promise((res, rej) => { const tx = db.transaction('kv','readonly'); const r = tx.objectStore('kv').get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }catch(e){ return null; } }
+
+/* ================= SAVE ================= */
+let fileHandle = null, saveTimer = null, saving = false;
+function setFileStatus(){
+  const pill = $('#fileStatus'), text = $('#fileStatusText');
+  if(fileHandle){
+    pill.classList.add('linked'); text.textContent = 'Fichier lié'; pill.title = fileHandle.name || '';
+    $('#heroSaveState').textContent = 'Fichier physique lié';
+    $('#footFileText').textContent = 'Fichier : ' + (fileHandle.name || 'enregistré');
+    $('#footDot1').style.background = '#10b981';
+  } else {
+    pill.classList.remove('linked'); text.textContent = 'Non lié';
+    $('#heroSaveState').textContent = 'Locale sécurisée';
+    $('#footFileText').textContent = 'Sauvegarde locale';
+    $('#footDot1').style.background = '#94a3b8';
+  }
+}
+function localMirror(){ try{ localStorage.setItem('mpi-performance-state', JSON.stringify(state)); }catch(e){} }
+async function writeNow(){
+  if(saving){ save(); return; }
+  saving = true; localMirror();
+  if(fileHandle){
+    try{ const w = await fileHandle.createWritable(); await w.write(JSON.stringify(state, null, 2)); await w.close(); flashSaved(); }catch(e){}
+  }
+  saving = false;
+}
+function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(writeNow, 400); }
+function flashSaved(){ const p = $('#fileStatus'); if(!p.classList.contains('linked')) return; p.classList.remove('saved-flash'); void p.offsetWidth; p.classList.add('saved-flash'); }
+function downloadCopy(){
+  try{
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'mpi-performance-' + CURRENT_WEEK + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    toast('Copie JSON téléchargée.', 'ok');
+  }catch(e){ toast('Export impossible dans ce contexte.', 'err'); }
+}
+async function linkFile(){
+  if(typeof window.showSaveFilePicker !== 'function'){
+    toast('File System Access API indisponible : une copie est téléchargée à la place.', 'warn');
+    downloadCopy(); return;
+  }
+  try{
+    const handle = await window.showSaveFilePicker({ suggestedName:'mpi-performance.json', types:[{ description:'Fichier de suivi MPI*', accept:{ 'application/json':['.json'] } }] });
+    fileHandle = handle; await idbSet('fileHandle', handle); await writeNow(); setFileStatus();
+    toast('Fichier lié : chaque modification sera écrite sur le disque.', 'ok');
+  }catch(err){
+    if(err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) toast('Sélection annulée ou permission refusée.', 'warn');
+    else toast("Impossible d'ouvrir le sélecteur de fichier.", 'err');
+  }
+}
+async function tryRestoreFileHandle(){
+  const handle = await idbGet('fileHandle');
+  if(!handle) return;
+  fileHandle = handle; setFileStatus();
+  try{
+    if(handle.queryPermission){
+      const p = await handle.queryPermission({ mode:'readwrite' });
+      if(p === 'granted'){
+        try{
+          const f = await handle.getFile(); const txt = await f.text();
+          if(txt.trim()){ state = mergeState(DEFAULT_STATE, JSON.parse(txt)); checkRollovers(); renderAll(); }
+        }catch(e){}
+        await writeNow();
+        toast('Fichier local reconnecté automatiquement.', 'ok');
+      } else {
+        toast('Fichier mémorisé — cliquez sur « Lier » pour réactiver l\u2019écriture.', 'info');
+      }
+    }
+  }catch(e){}
+}
+
+/* ================= AUDIO ENGINE ================= */
+const Sound = {
+  ctx:null, master:null, analyser:null, nodes:[], playing:false, volume:.35,
+  ensure(){
+    if(!this.ctx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return null;
+      try{
+        this.ctx = new AC();
+        this.master = this.ctx.createGain(); this.master.gain.value = this.volume;
+        this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 256; this.analyser.smoothingTimeConstant = .82;
+        this.master.connect(this.analyser); this.analyser.connect(this.ctx.destination);
+      }catch(e){ return null; }
+    }
+    if(this.ctx.state === 'suspended') this.ctx.resume().catch(()=>{});
+    return this.ctx;
+  },
+  noiseBuffer(kind, seconds){
+    const ctx = this.ctx, len = Math.floor(ctx.sampleRate * (seconds || 4));
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for(let c = 0; c < 2; c++){
+      const d = buf.getChannelData(c);
+      let last = 0, b0 = 0, b1 = 0, b2 = 0;
+      for(let i = 0; i < len; i++){
+        const w = Math.random()*2 - 1;
+        if(kind === 'brown'){ last = (last + 0.02*w) / 1.02; d[i] = last * 3.2; }
+        else if(kind === 'pink'){ b0 = 0.99765*b0 + w*0.0990460; b1 = 0.96300*b1 + w*0.2965164; b2 = 0.57000*b2 + w*1.0526913; d[i] = (b0+b1+b2+w*0.1848)*0.22; }
+        else d[i] = w * 0.6;
+      }
+    }
+    return buf;
+  },
+  stop(){
+    const nodes = this.nodes.slice(); this.nodes = []; this.playing = false;
+    if(this.master && this.ctx){
+      try{ const now = this.ctx.currentTime; this.master.gain.cancelScheduledValues(now); this.master.gain.setValueAtTime(this.master.gain.value, now); this.master.gain.linearRampToValueAtTime(0, now + .25); }catch(e){}
+    }
+    setTimeout(() => {
+      nodes.forEach(n => { try{ if(n.stop) n.stop(); }catch(e){} try{ n.disconnect(); }catch(e){} });
+      if(this.master && this.ctx && !this.playing){ try{ this.master.gain.cancelScheduledValues(this.ctx.currentTime); this.master.gain.setValueAtTime(this.volume, this.ctx.currentTime); }catch(e){} }
+    }, 320);
+  },
+  start(name){
+    const ctx = this.ensure(); if(!ctx) return false;
+    const old = this.nodes.slice(); this.nodes = [];
+    old.forEach(n => { try{ if(n.stop) n.stop(); }catch(e){} try{ n.disconnect(); }catch(e){} });
+    try{ this.master.gain.cancelScheduledValues(ctx.currentTime); this.master.gain.setValueAtTime(this.volume, ctx.currentTime); }catch(e){}
+    const out = [], now = ctx.currentTime;
+    const bus = ctx.createGain(); bus.gain.setValueAtTime(0, now); bus.gain.linearRampToValueAtTime(1, now + 2); bus.connect(this.master); out.push(bus);
+
+    if(name === 'gamma'){
+      const merger = ctx.createChannelMerger(2);
+      const l = ctx.createOscillator(); l.frequency.value = 195;
+      const r = ctx.createOscillator(); r.frequency.value = 235;
+      const gl = ctx.createGain(); gl.gain.value = .55; const gr = ctx.createGain(); gr.gain.value = .55;
+      l.connect(gl); gl.connect(merger, 0, 0); r.connect(gr); gr.connect(merger, 0, 1);
+      const amp = ctx.createGain(); amp.gain.value = .32; merger.connect(amp);
+      const lfo = ctx.createOscillator(); lfo.frequency.value = .055; const lg = ctx.createGain(); lg.gain.value = .1; lfo.connect(lg); lg.connect(amp.gain);
+      amp.connect(bus); l.start(); r.start(); lfo.start();
+      out.push(l, r, gl, gr, merger, amp, lfo, lg);
+    } else if(name === 'brown'){
+      const src = ctx.createBufferSource(); src.buffer = this.noiseBuffer('brown', 5); src.loop = true;
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 26;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 190; lp.Q.value = .7;
+      const amp = ctx.createGain(); amp.gain.value = 1.05;
+      src.connect(hp); hp.connect(lp); lp.connect(amp); amp.connect(bus);
+      const lfo = ctx.createOscillator(); lfo.frequency.value = .035; const lg = ctx.createGain(); lg.gain.value = .12; lfo.connect(lg); lg.connect(amp.gain);
+      src.start(); lfo.start(); out.push(src, hp, lp, amp, lfo, lg);
+    } else if(name === 'lofi'){
+      const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 720; filt.Q.value = 5.5;
+      const lfo = ctx.createOscillator(); lfo.frequency.value = .062; const lg = ctx.createGain(); lg.gain.value = 340; lfo.connect(lg); lg.connect(filt.frequency);
+      const amp = ctx.createGain(); amp.gain.value = .34;
+      [110, 164.81, 220, 246.94, 329.63].forEach((f, i) => {
+        const o = ctx.createOscillator(); o.type = (i % 2) ? 'triangle' : 'sawtooth'; o.frequency.value = f; o.detune.value = (i-2)*7;
+        const og = ctx.createGain(); og.gain.value = .18; o.connect(og); og.connect(filt); o.start(); out.push(o, og);
+      });
+      const d = ctx.createDelay(1.2); d.delayTime.value = .46; const fb = ctx.createGain(); fb.gain.value = .34; const dw = ctx.createGain(); dw.gain.value = .42;
+      filt.connect(amp); filt.connect(d); d.connect(fb); fb.connect(d); d.connect(dw); dw.connect(amp); amp.connect(bus); lfo.start();
+      out.push(filt, lfo, lg, amp, d, fb, dw);
+    } else if(name === 'rain'){
+      const src = ctx.createBufferSource(); src.buffer = this.noiseBuffer('pink', 5); src.loop = true;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1250; bp.Q.value = .55;
+      const hp2 = ctx.createBiquadFilter(); hp2.type = 'highpass'; hp2.frequency.value = 340;
+      const lp2 = ctx.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 5200;
+      const amp = ctx.createGain(); amp.gain.value = .62;
+      const lfo = ctx.createOscillator(); lfo.frequency.value = .085; const lg = ctx.createGain(); lg.gain.value = .17; lfo.connect(lg); lg.connect(amp.gain);
+      src.connect(bp); bp.connect(hp2); hp2.connect(lp2); lp2.connect(amp); amp.connect(bus);
+      const rumble = ctx.createBufferSource(); rumble.buffer = this.noiseBuffer('brown', 5); rumble.loop = true;
+      const rlp = ctx.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 235; const rg = ctx.createGain(); rg.gain.value = .34;
+      rumble.connect(rlp); rlp.connect(rg); rg.connect(bus);
+      src.start(); rumble.start(); lfo.start();
+      out.push(src, bp, hp2, lp2, amp, lfo, lg, rumble, rlp, rg);
+    } else {
+      const amp = ctx.createGain(); amp.gain.value = .3;
+      [[432,.5],[216,.38],[648,.13],[864,.06],[324,.12]].forEach((p, i) => {
+        const o = ctx.createOscillator(); o.frequency.value = p[0]; o.detune.value = (i-2)*1.6;
+        const og = ctx.createGain(); og.gain.value = p[1];
+        const trem = ctx.createOscillator(); trem.frequency.value = .038 + i*.019; const tg = ctx.createGain(); tg.gain.value = p[1]*.42;
+        trem.connect(tg); tg.connect(og.gain); o.connect(og); og.connect(amp); o.start(); trem.start();
+        out.push(o, og, trem, tg);
+      });
+      amp.connect(bus); out.push(amp);
+    }
+    this.nodes = out; this.playing = true; return true;
+  },
+  setVolume(v){
+    this.volume = clamp(v, 0, 1);
+    if(this.master && this.ctx){ try{ const now = this.ctx.currentTime; this.master.gain.cancelScheduledValues(now); this.master.gain.linearRampToValueAtTime(this.volume, now + .12); }catch(e){} }
+  }
+};
+function playAlarm(soft){
+  const ctx = Sound.ensure(); if(!ctx) return;
+  try{
+    const t0 = ctx.currentTime;
+    const freqs = soft ? [659, 880] : [988, 740, 1244];
+    freqs.forEach((f, i) => {
+      const o = ctx.createOscillator(); o.type = i === 2 ? 'triangle' : 'sine'; o.frequency.value = f;
+      const g = ctx.createGain(); g.gain.value = 0; o.connect(g); g.connect(ctx.destination);
+      for(let k = 0; k < 3; k++){
+        const s = t0 + k*.46 + i*.1;
+        g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(.17 - i*.04, s + .022); g.gain.exponentialRampToValueAtTime(.0012, s + .36);
+      }
+      o.start(t0); o.stop(t0 + 1.9);
+    });
+  }catch(e){}
+}
+
+/* ================= AUDIO UI ================= */
+const trackSelect = $('#trackSelect'), volumeSlider = $('#volumeSlider');
+function paintRange(el){ const pct = ((Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min))) * 100; el.style.setProperty('--fill', pct + '%'); }
+function updateSoundUI(){
+  if(Sound.playing){
+    $('#soundLabel').textContent = 'Pause';
+    $('#soundIcon').innerHTML = '<rect x="6.5" y="5" width="3.6" height="14" rx="1.4"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.4"/>';
+    $('#vizLabel').textContent = 'Signal · synthèse active';
+  } else {
+    $('#soundLabel').textContent = 'Lecture';
+    $('#soundIcon').innerHTML = '<path d="M7 4.6c0-.9 1-1.5 1.8-1L19.2 10c.8.5.8 1.6 0 2.1L8.8 18.5c-.8.5-1.8-.1-1.8-1V4.6z"/>';
+    $('#vizLabel').textContent = 'Signal · en veille';
+  }
+}
+trackSelect.addEventListener('change', () => {
+  state.settings.track = trackSelect.value; save();
+  if(Sound.playing){ Sound.start(trackSelect.value); const t = trackSelect.options[trackSelect.selectedIndex].text.split('·')[1]; toast('Piste : ' + (t ? t.trim() : 'ambiance'), 'info'); }
+});
+volumeSlider.addEventListener('input', () => {
+  const v = Number(volumeSlider.value); state.settings.volume = v;
+  $('#volValue').textContent = v + ' %'; paintRange(volumeSlider); Sound.setVolume(v/100); save();
+});
+$('#btnSoundToggle').addEventListener('click', () => {
+  if(Sound.playing) Sound.stop();
+  else if(!Sound.start(trackSelect.value)) toast('Audio indisponible dans ce navigateur.', 'err');
+  updateSoundUI();
+});
+$('#btnSoundStop').addEventListener('click', () => { Sound.stop(); updateSoundUI(); });
+
+/* ================= VISUALIZER ================= */
+const viz = $('#vizCanvas'), vctx = viz.getContext('2d');
+let vW = 0, vH = 0, vData = null, phase = 0;
+function resizeViz(){ const dpr = Math.min(window.devicePixelRatio || 1, 2); vW = viz.clientWidth || 320; vH = viz.clientHeight || 120; viz.width = Math.floor(vW*dpr); viz.height = Math.floor(vH*dpr); vctx.setTransform(dpr,0,0,dpr,0,0); }
+function rr(c, x, y, w, h, r){ r = Math.min(r, w/2, h/2); c.beginPath(); c.moveTo(x+r, y); c.arcTo(x+w, y, x+w, y+h, r); c.arcTo(x+w, y+h, x, y+h, r); c.arcTo(x, y+h, x, y, r); c.arcTo(x, y, x+w, y, r); c.closePath(); }
+function drawViz(){
+  requestAnimationFrame(drawViz);
+  if(document.hidden) return;
+  if(viz.clientWidth !== vW || viz.clientHeight !== vH) resizeViz();
+  vctx.clearRect(0, 0, vW, vH);
+  const bars = 42, gap = 3, bw = Math.max(2, (vW - gap*(bars-1)) / bars);
+  if(Sound.playing && Sound.analyser){
+    if(!vData || vData.length !== Sound.analyser.frequencyBinCount) vData = new Uint8Array(Sound.analyser.frequencyBinCount);
+    Sound.analyser.getByteFrequencyData(vData);
+    for(let i = 0; i < bars; i++){
+      const v = (vData[Math.floor((i/bars) * vData.length * .72)] || 0) / 255;
+      const h = Math.max(4, v * (vH - 30)), x = i*(bw+gap), y = vH - h - 8;
+      const g = vctx.createLinearGradient(0, y, 0, y+h);
+      g.addColorStop(0, 'rgba(79,70,229,.9)'); g.addColorStop(.6, 'rgba(37,99,235,.6)'); g.addColorStop(1, 'rgba(13,148,136,.35)');
+      vctx.fillStyle = g; rr(vctx, x, y, bw, h, Math.min(4, bw/2)); vctx.fill();
+    }
+  } else {
+    phase += .012;
+    for(let i = 0; i < bars; i++){
+      const t = i / bars;
+      const w = (Math.sin(phase*1.6 + t*5.2)*.5+.5)*.28 + (Math.sin(phase*.9 + t*2.2)*.5+.5)*.14;
+      const h = Math.max(4, w*(vH - 30)), x = i*(bw+gap), y = vH - h - 8;
+      vctx.fillStyle = 'rgba(148,163,184,.32)'; rr(vctx, x, y, bw, h, Math.min(4, bw/2)); vctx.fill();
+    }
+  }
+}
+
+/* ================= TIPS ================= */
+let tipIdx = Math.floor(Math.random() * TIPS.length), spotIdx = (tipIdx + 3) % TIPS.length;
+function swapTip(bodyEl, apply){ bodyEl.classList.add('out'); setTimeout(() => { apply(); bodyEl.classList.remove('out'); }, 260); }
+function showTimerTip(custom){
+  swapTip($('#timerTipBody'), () => {
+    if(custom){ $('#timerTipTitle').textContent = custom.title; $('#timerTipText').textContent = custom.text; }
+    else { const t = TIPS[tipIdx]; $('#timerTipTitle').textContent = t.t; $('#timerTipText').textContent = t.x; }
+  });
+}
+$('#timerTipNext').addEventListener('click', () => { tipIdx = (tipIdx + 1) % TIPS.length; showTimerTip(); });
+function showSpotTip(){ const t = TIPS[spotIdx]; swapTip($('#spotTipBody'), () => { $('#spotTipTitle').textContent = t.t; $('#spotTipText').textContent = t.x; }); }
+$('#spotTipNext').addEventListener('click', () => { spotIdx = (spotIdx + 1) % TIPS.length; showSpotTip(); });
+function renderTipGrid(){
+  $('#tipGrid').innerHTML = TIPS.map(t => `
+    <div class="tip-card reveal" style="--c:${t.c}">
+      <div class="tip-ico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${t.i}</svg></div>
+      <div class="font-display text-slate-900 font-semibold text-[16px] mt-4">${esc(t.t)}</div>
+      <p class="text-slate-500 text-[13.2px] mt-1.5 leading-relaxed">${esc(t.x)}</p>
+    </div>`).join('');
+}
+setInterval(() => { if(!document.hidden){ spotIdx = (spotIdx + 1) % TIPS.length; showSpotTip(); } }, 20000);
+
+/* ================= TIMER ================= */
+const C_RING = 703.72;
+const T = { total:1200, remaining:1200, running:false, endAt:0, kind:'work', mode:'Mode exercice', sub:'Règle des 20 minutes', iv:null, suggested:300 };
+function fmt(sec){ sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60; return h ? h+':'+pad(m)+':'+pad(s) : pad(m)+':'+pad(s); }
+function renderTimer(){
+  $('#timerDisplay').textContent = fmt(T.remaining);
+  $('#ringFg').style.strokeDashoffset = (C_RING * (1 - T.remaining / T.total)).toFixed(2);
+  $('#ringFg').setAttribute('stroke', T.kind === 'break' ? 'url(#ringGradPause)' : 'url(#ringGrad)');
+  $('#timerModeTitle').textContent = T.mode;
+  $('#timerSubtitle').textContent = T.sub;
+  $('#timerSessionCount').textContent = 'Session ' + state.sessionCount + ' · ' + CURRENT_WEEK;
+  const dot = $('#timerDot'), st = $('#timerState');
+  if(T.running){ dot.style.background = T.kind === 'break' ? '#10b981' : '#4f46e5'; st.textContent = T.kind === 'break' ? 'Pause en cours' : 'Concentration'; }
+  else if(T.remaining < T.total && T.remaining > 0){ dot.style.background = '#d97706'; st.textContent = 'En pause'; }
+  else { dot.style.background = '#94a3b8'; st.textContent = 'En attente'; }
+  $('#startPauseLabel').textContent = T.running ? 'Pause' : (T.remaining < T.total && T.remaining > 0 ? 'Reprendre' : 'Démarrer');
+  $('#playIcon').innerHTML = T.running ? '<rect x="6.5" y="5" width="3.6" height="14" rx="1.4"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.4"/>' : '<path d="M7 4.6c0-.9 1-1.5 1.8-1L19.2 10c.8.5.8 1.6 0 2.1L8.8 18.5c-.8.5-1.8-.1-1.8-1V4.6z"/>';
+  document.title = T.running ? fmt(T.remaining) + ' · ' + T.mode + ' — MPI*' : 'MPI* Performance Tracker — Tableau de bord prépa scientifique';
+}
+function setTimer(seconds, mode, sub, kind){
+  stopTimer(true);
+  T.total = seconds; T.remaining = seconds; T.mode = mode; T.sub = sub; T.kind = kind || 'work';
+  $$('.preset').forEach(p => p.classList.toggle('active', Number(p.dataset.seconds) === seconds && p.dataset.mode === mode));
+  $('#timerTipStart').classList.add('hidden');
+  renderTimer();
+}
+function startTimer(){
+  if(T.remaining <= 0) T.remaining = T.total;
+  T.running = true; T.endAt = Date.now() + T.remaining * 1000;
+  clearInterval(T.iv); T.iv = setInterval(tick, 250);
+  if(T.kind === 'work' && $('#linkToTimer').checked && !Sound.playing){ Sound.start(trackSelect.value); updateSoundUI(); }
+  if(T.kind === 'break') showTimerTip();
+  $('#timerTipStart').classList.add('hidden');
+  renderTimer();
+}
+function stopTimer(silent){
+  if(T.running) T.remaining = Math.max(0, Math.ceil((T.endAt - Date.now()) / 1000));
+  T.running = false; clearInterval(T.iv);
+  if(!silent) renderTimer();
+}
+function tick(){
+  T.remaining = Math.max(0, Math.ceil((T.endAt - Date.now()) / 1000));
+  if(T.remaining <= 0){ finishTimer(); return; }
+  renderTimer();
+}
+function finishTimer(){
+  T.running = false; clearInterval(T.iv); T.remaining = 0;
+  if($('#linkToTimer').checked && Sound.playing){ Sound.stop(); updateSoundUI(); }
+  if(T.kind === 'work'){
+    playAlarm(false);
+    const mins = Math.round(T.total / 60);
+    state.focusMinutes += mins; state.sessionCount += 1;
+    if(state.sessionsTodayDate !== eveningKey()){ state.sessionsToday = 0; state.sessionsTodayDate = eveningKey(); }
+    state.sessionsToday += 1; save();
+    T.suggested = T.total >= 2400 ? 600 : 300;
+    tipIdx = (tipIdx + 1) % TIPS.length; showTimerTip();
+    const btn = $('#timerTipStart'); btn.textContent = 'Démarrer la pause suggérée (' + (T.suggested/60) + ' min)'; btn.classList.remove('hidden');
+    toast('Bloc terminé : ' + mins + ' min de focus enregistrées. Place à la pause !', 'ok');
+    renderStats();
+  } else {
+    playAlarm(true);
+    toast('Pause terminée — retour au travail, calmement.', 'info');
+  }
+  renderTimer();
+  $('#timerState').textContent = 'Terminé';
+}
+$$('.preset').forEach(p => p.addEventListener('click', () => setTimer(Number(p.dataset.seconds), p.dataset.mode, p.dataset.sub, p.dataset.kind)));
+$('#btnStartPause').addEventListener('click', () => { Sound.ensure(); T.running ? stopTimer() : startTimer(); });
+$('#btnReset').addEventListener('click', () => { stopTimer(true); T.remaining = T.total; $('#timerTipStart').classList.add('hidden'); renderTimer(); });
+$('#timerTipStart').addEventListener('click', () => {
+  setTimer(T.suggested, T.suggested === 600 ? 'Pause longue' : 'Pause courte', 'Récupération active', 'break');
+  startTimer();
+});
+$('#heroStart').addEventListener('click', () => {
+  setTimer(1200, 'Mode exercice', 'Règle des 20 minutes', 'work');
+  document.getElementById('timer').scrollIntoView({ behavior:'smooth' });
+  setTimeout(startTimer, 500);
+});
+$('#linkToTimer').addEventListener('change', e => { state.settings.linkToTimer = e.target.checked; save(); });
+
+function launchBlock(i){
+  const b = PLAN[i]; if(!b) return;
+  if(b.type === 'work') setTimer(b.min*60, b.title, 'Bloc du soir · ' + b.start + ' – ' + b.end, 'work');
+  else { setTimer(b.min*60, b.title, b.start + ' – ' + b.end, 'break'); showTimerTip({ title:b.title, text:b.tip }); }
+  document.getElementById('timer').scrollIntoView({ behavior:'smooth' });
+  toast('« ' + b.title + ' » chargé dans le minuteur.', 'info');
+}
+
+/* ================= PLAN / TIMELINE ================= */
+function renderPlan(){
+  let wi = -1;
+  $('#planList').innerHTML = PLAN.map((b, i) => {
+    if(b.type === 'work'){
+      wi++;
+      const loads = [1,2,3].map(n => '<i class="'+(n <= b.load ? 'on' : '')+'"></i>').join('');
+      return `
+      <div class="tl-item work" data-i="${i}" data-w="${wi}" style="--c:${b.c}">
+        <div class="tl-time"><div class="num-mono text-[13px] font-bold text-slate-900">${b.start}</div><div class="num-mono text-[11px] text-slate-400 mt-0.5">${b.min} min</div></div>
+        <span class="tl-dot"></span>
+        <div class="tl-card">
+          <div class="flex items-start gap-3.5">
+            <label class="cbx mt-0.5"><input type="checkbox" data-check="${wi}" aria-label="Valider ${esc(b.title)}"><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span></label>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="subj">${esc(b.subj)}</span>
+                <span class="load" title="Charge cognitive">${loads}</span>
+                <span class="now-badge">En cours</span>
+              </div>
+              <div class="tl-title font-semibold text-slate-900 text-[15px] mt-2">${esc(b.title)}</div>
+              <div class="text-[12.8px] text-slate-500 mt-1 leading-relaxed">${esc(b.desc)}</div>
+              <div class="flex items-center justify-between gap-3 mt-3">
+                <span class="num-mono text-[11px] text-slate-400">${b.start} – ${b.end}</span>
+                <button class="btn btn-soft px-3 py-1.5 text-[12px] rounded-[9px]" data-launch="${i}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.6c0-.9 1-1.5 1.8-1L19.2 10c.8.5.8 1.6 0 2.1L8.8 18.5c-.8.5-1.8-.1-1.8-1V4.6z"/></svg>Chrono
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+    return `
+      <div class="tl-item break ${b.long ? 'long' : ''}" data-i="${i}" style="--c:#10b981">
+        <div class="tl-time !pt-3"><div class="num-mono text-[12px] font-semibold text-emerald-700">${b.start}</div><div class="num-mono text-[10.5px] text-slate-400 mt-0.5">${b.min} min</div></div>
+        <span class="tl-dot"></span>
+        <div class="tl-card">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg grid place-items-center flex-none bg-white text-emerald-600 border border-emerald-100">
+              ${b.long
+                ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 11h18"/><path d="M5 11V7a7 7 0 0 1 14 0v4"/><path d="M4 11l1.5 8h13L20 11"/></svg>'
+                : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/></svg>'}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[13.5px] font-semibold text-emerald-800">${esc(b.title)}</span>
+                <span class="now-badge">En cours</span>
+              </div>
+              <div class="text-[12.5px] text-slate-600 mt-1 leading-relaxed">${esc(b.tip)}</div>
+            </div>
+            <button class="text-emerald-700 hover:text-emerald-900 p-1.5 rounded-lg hover:bg-white transition shrink-0" data-launch="${i}" title="Lancer la pause" aria-label="Lancer la pause">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  $$('#planList [data-check]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const idx = Number(cb.dataset.check);
+      state.checklist[idx] = cb.checked;
+      state.checklistDate = eveningKey();
+      if(cb.checked){
+        toast('Bloc validé : ' + WORK_BLOCKS[idx].title, 'ok');
+        if(state.checklist.every(Boolean) && state.lastStreakDate !== eveningKey()){
+          state.streak += 1; state.lastStreakDate = eveningKey();
+          toast('Soirée complète ! Série portée à ' + state.streak + ' jours.', 'ok');
+        }
+      }
+      save(); updatePlanUI(); renderStreak(); renderStats();
+    });
+  });
+  $$('#planList [data-launch]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); launchBlock(Number(b.dataset.launch)); }));
+}
+function updatePlanUI(){
+  let done = 0, mins = 0;
+  $$('#planList .tl-item.work').forEach(el => {
+    const w = Number(el.dataset.w), on = !!state.checklist[w];
+    el.classList.toggle('done', on);
+    const cb = el.querySelector('[data-check]'); if(cb) cb.checked = on;
+    if(on){ done++; mins += WORK_BLOCKS[w].min; }
+  });
+  $('#tonightDone').textContent = done;
+  $('#tonightMin').textContent = mins;
+  $('#tonightRing').style.strokeDashoffset = (314.16 * (1 - done/6)).toFixed(2);
+  $('#statTonight').textContent = done;
+}
+let currentBlockIndex = -1;
+function updateNow(){
+  const d = new Date();
+  $('#clockNow').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  const n = nowMin(), first = toMin(PLAN[0].start), last = toMin(PLAN[PLAN.length-1].end);
+  currentBlockIndex = PLAN.findIndex(b => n >= toMin(b.start) && n < toMin(b.end));
+  $$('#planList .tl-item').forEach(el => el.classList.toggle('current', Number(el.dataset.i) === currentBlockIndex));
+
+  let title, meta, pct = 0, color = '#4f46e5', btnLabel = 'Lancer ce bloc dans le minuteur', heroLabel = 'Programme du soir';
+  if(currentBlockIndex >= 0){
+    const b = PLAN[currentBlockIndex], s = toMin(b.start), e = toMin(b.end);
+    const left = Math.ceil(e - n);
+    pct = ((n - s) / (e - s)) * 100;
+    title = b.title;
+    meta = (b.type === 'work' ? 'Bloc de travail' : 'Pause') + ' · ' + b.start + ' – ' + b.end + ' · encore ' + left + ' min';
+    color = b.type === 'work' ? b.c : '#10b981';
+    btnLabel = b.type === 'work' ? 'Lancer ce bloc dans le minuteur' : 'Lancer cette pause';
+    heroLabel = b.type === 'work' ? 'En cours · ' + b.subj : 'Pause en cours';
+  } else if(n < first){
+    const first0 = PLAN[0];
+    const left = Math.ceil(first - n);
+    title = 'Prochain : ' + first0.title;
+    meta = 'Début à ' + first0.start + ' · dans ' + (left >= 60 ? Math.floor(left/60) + ' h ' + pad(left%60) : left + ' min');
+    btnLabel = 'Préparer le premier bloc';
+    currentBlockIndex = 0;
+    heroLabel = 'Prochain bloc';
+  } else {
+    title = 'Soirée terminée — bon repos';
+    meta = 'Prochaine session demain à ' + PLAN[0].start + '. Le sommeil consolide ce que vous avez appris.';
+    pct = 100; color = '#0d9488';
+    btnLabel = 'Revoir le premier bloc';
+    currentBlockIndex = 0;
+    heroLabel = 'Session terminée';
+  }
+  $('#nowTitle').textContent = title;
+  $('#nowMeta').textContent = meta;
+  const bar = $('#nowBar'); bar.style.setProperty('--c', color); bar.style.width = clamp(pct, 0, 100) + '%';
+  $('#nowStartLabel').textContent = btnLabel;
+  $('#heroNowLabel').textContent = heroLabel;
+  $('#heroNowTitle').textContent = title.replace('Prochain : ', '');
+  const total = last - first, overall = clamp(((n - first) / total) * 100, 0, 100);
+  const hb = $('#heroNowBar'); hb.style.setProperty('--c', color); hb.style.width = overall + '%';
+  $('#heroNowMeta').textContent = '19:50 → 00:45 · ' + Math.round(overall) + ' % de la soirée';
+}
+$('#nowStart').addEventListener('click', () => launchBlock(currentBlockIndex >= 0 ? currentBlockIndex : 0));
+
+/* ================= QUOTAS ================= */
+function renderQuotaCards(){
+  $('#quotaGrid').innerHTML = Object.keys(SUBJECTS).map(k => {
+    const s = SUBJECTS[k];
+    return `
+    <div class="cardx lift p-5 reveal" data-quota="${k}" style="--c:${s.color};">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2.5"><span class="w-2.5 h-2.5 rounded-full" style="background:${s.color};"></span><h3 class="font-display text-slate-900 text-[18px] font-semibold tracking-[-.01em]">${s.label}</h3></div>
+          <div class="text-[11.5px] text-slate-500 mt-2">${s.sub}</div>
+        </div>
+        <div class="relative w-[52px] h-[52px] flex-none">
+          <svg viewBox="0 0 60 60" class="w-full h-full -rotate-90 ring-mini">
+            <circle cx="30" cy="30" r="24" fill="none" stroke="#eef1f7" stroke-width="6"/>
+            <circle data-ring cx="30" cy="30" r="24" fill="none" stroke="${s.color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="150.8"/>
+          </svg>
+          <div class="absolute inset-0 grid place-items-center"><span class="num-mono text-[11px] font-bold text-slate-700" data-pct>0%</span></div>
+        </div>
+      </div>
+      <div class="mt-5 quota-bar"><div class="quota-fill" data-fill></div></div>
+      <div class="mt-5 flex items-center justify-between">
+        <div>
+          <div class="num-mono text-[24px] font-bold text-slate-900 leading-none"><span data-done>0</span><span class="text-slate-300 text-[15px]"> / <span data-target>${s.target}</span></span></div>
+          <div class="text-[10px] tracking-[.15em] uppercase text-slate-400 mt-1.5 font-semibold">Objectif hebdo</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="step-btn" data-step="-1" aria-label="Retirer un exercice">−</button>
+          <button class="step-btn" data-step="1" aria-label="Ajouter un exercice">+</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  $$('#quotaGrid [data-quota]').forEach(card => {
+    const k = card.dataset.quota;
+    card.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
+      const q = state.quotas[k], prev = q.done;
+      q.done = clamp(q.done + Number(b.dataset.step), 0, 999);
+      if(q.done >= q.target && prev < q.target) toast('Objectif ' + SUBJECTS[k].label + ' atteint cette semaine !', 'ok');
+      save(); renderQuotas(); renderStats(); renderHistory();
+    }));
+  });
+}
+function renderQuotas(){
+  let done = 0, target = 0;
+  $$('#quotaGrid [data-quota]').forEach(card => {
+    const q = state.quotas[card.dataset.quota];
+    const p = clamp(q.done / q.target, 0, 1);
+    done += Math.min(q.done, q.target); target += q.target;
+    card.querySelector('[data-done]').textContent = q.done;
+    card.querySelector('[data-target]').textContent = q.target;
+    card.querySelector('[data-pct]').textContent = Math.round(p*100) + '%';
+    card.querySelector('[data-fill]').style.width = (p*100) + '%';
+    card.querySelector('[data-ring]').style.strokeDashoffset = (150.8 * (1 - p)).toFixed(2);
+  });
+  const gp = target ? done / target : 0;
+  $('#globalRing').style.strokeDashoffset = (314.16 * (1 - gp)).toFixed(2);
+  $('#globalPct').textContent = Math.round(gp*100) + '%';
+  $('#globalDone').textContent = weekTotal(state.quotas);
+  $('#globalTarget').textContent = target;
+}
+
+/* ================= STREAK ================= */
+function renderStreak(){
+  $('#streakValue').textContent = state.streak;
+  $('#heroStreak').textContent = state.streak;
+  $('#ctaStreak').textContent = state.streak;
+  $('#streakBar').style.width = clamp(state.streak / 30 * 100, 0, 100) + '%';
+}
+$('#streakMinus').addEventListener('click', () => { state.streak = Math.max(0, state.streak - 1); save(); renderStreak(); });
+$('#streakPlus').addEventListener('click', () => { state.streak += 1; save(); renderStreak(); });
+$('#streakSet').addEventListener('click', () => {
+  const v = parseInt($('#streakInput').value, 10);
+  if(isNaN(v) || v < 0){ toast('Entrez une valeur valide.', 'warn'); return; }
+  state.streak = clamp(v, 0, 999); $('#streakInput').value = ''; save(); renderStreak(); toast('Série mise à jour.', 'ok');
+});
+
+/* ================= MEMO ================= */
+const TAGS = { astuce:['tag-astuce','Astuce'], erreur:['tag-erreur','Erreur'], concours:['tag-concours','À retenir'] };
+function renderMemo(){
+  const list = $('#memoList');
+  list.innerHTML = state.memo.map((m, i) => {
+    const t = TAGS[m.tag] || TAGS.astuce;
+    const date = m.date ? new Date(m.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '';
+    return `<div class="memo-item" data-i="${i}">
+      <span class="tag ${t[0]} mt-0.5">${t[1]}</span>
+      <div class="flex-1 min-w-0"><div class="text-[14px] text-slate-800 leading-relaxed break-words">${esc(m.text)}</div><div class="num-mono text-[10.5px] text-slate-400 mt-1">${date}</div></div>
+      <button class="text-slate-300 hover:text-rose-500 transition-colors p-1" data-del="${i}" aria-label="Supprimer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/></svg>
+      </button></div>`;
+  }).join('');
+  $('#memoEmpty').classList.toggle('hidden', state.memo.length > 0);
+  $('#memoCount').textContent = state.memo.length;
+  $('#statMemo').textContent = state.memo.length;
+  $$('#memoList [data-del]').forEach(b => b.addEventListener('click', () => {
+    const i = Number(b.dataset.del), item = b.closest('.memo-item');
+    item.classList.add('removing');
+    setTimeout(() => { state.memo.splice(i, 1); save(); renderMemo(); }, 320);
+  }));
+}
+function addMemo(){
+  const inp = $('#memoInput'), text = inp.value.trim();
+  if(!text){ inp.focus(); toast('Écrivez d\u2019abord votre astuce.', 'warn'); return; }
+  state.memo.unshift({ text, tag: $('#memoTag').value, date: new Date().toISOString() });
+  state.memo = state.memo.slice(0, 200);
+  inp.value = ''; save(); renderMemo(); toast('Ajouté au carnet.', 'ok');
+}
+$('#memoAdd').addEventListener('click', addMemo);
+$('#memoInput').addEventListener('keydown', e => { if(e.key === 'Enter') addMemo(); });
+$('#memoClear').addEventListener('click', () => {
+  if(!state.memo.length) return;
+  if(confirm('Effacer toutes les entrées du carnet ?')){ state.memo = []; save(); renderMemo(); toast('Carnet vidé.', 'info'); }
+});
+
+/* ================= HISTORY ================= */
+function renderHistory(){
+  const hist = state.history.slice(-8);
+  const data = hist.map(h => ({ week:h.week, total:h.total, cur:false }));
+  data.push({ week: CURRENT_WEEK, total: weekTotal(state.quotas), cur:true });
+  const target = Object.values(state.quotas).reduce((s,q) => s + q.target, 0);
+  const max = Math.max(target, ...data.map(d => d.total), 1);
+  const x0 = 60, x1 = 890, slot = (x1 - x0) / data.length, bw = Math.min(56, slot * .56), base = 258, top = 30;
+  const labels = [], bars = [];
+  [0, .25, .5, .75, 1].forEach(f => {
+    const y = base - (base - top) * f;
+    labels.push(`<text x="32" y="${y + 4}" text-anchor="end">${Math.round(max * f)}</text>`);
+  });
+  const ty = base - (base - top) * (target / max);
+  bars.push(`<line x1="40" y1="${ty}" x2="900" y2="${ty}" stroke="#a5b4fc" stroke-dasharray="5 5" stroke-width="1.2"/><text x="898" y="${ty - 6}" text-anchor="end" fill="#6366f1" font-size="10.5" font-family="JetBrains Mono, monospace">objectif ${target}</text>`);
+  data.forEach((d, i) => {
+    const cx = x0 + slot * i + slot / 2, h = Math.max(3, (base - top) * (d.total / max)), y = base - h;
+    bars.push(`<rect class="bar" x="${cx - bw/2}" y="${y}" width="${bw}" height="${h}" rx="8" fill="url(#${d.cur ? 'barC' : 'barA'})" opacity="${d.cur ? 1 : .88}"/>`);
+    bars.push(`<text x="${cx}" y="${y - 8}" text-anchor="middle" fill="#334155" font-size="12" font-weight="700" font-family="JetBrains Mono, monospace">${d.total}</text>`);
+    labels.push(`<text x="${cx}" y="${base + 22}" text-anchor="middle" ${d.cur ? 'fill="#0d9488" font-weight="700"' : ''}>${d.week.split('-')[1]}</text>`);
+  });
+  $('#chartLabels').innerHTML = labels.join('');
+  $('#chartBars').innerHTML = bars.join('');
+
+  const rows = state.history.slice().reverse();
+  $('#historyTable').innerHTML = rows.map(h => `<tr class="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
+    <td class="py-3.5 num-mono text-slate-900 font-semibold">${esc(h.week)}</td>
+    <td class="py-3.5 num-mono">${h.maths ?? 0}</td><td class="py-3.5 num-mono">${h.physics ?? 0}</td>
+    <td class="py-3.5 num-mono">${h.info ?? 0}</td><td class="py-3.5 num-mono">${h.french ?? 0}</td>
+    <td class="py-3.5 num-mono text-right font-bold text-indigo-600">${h.total ?? 0}</td></tr>`).join('');
+  $('#historyEmpty').classList.toggle('hidden', rows.length > 0);
+  const last8 = state.history.slice(-8);
+  $('#avgWeek').textContent = last8.length ? (last8.reduce((s,h) => s + (h.total||0), 0) / last8.length).toFixed(1) : 0;
+  $('#bestWeek').textContent = state.history.length ? Math.max(...state.history.map(h => h.total || 0)) : 0;
+}
+
+/* ================= STATS ================= */
+function renderStats(){
+  const target = Object.values(state.quotas).reduce((s,q) => s + q.target, 0);
+  $('#statWeek').textContent = weekTotal(state.quotas);
+  $('#statTarget').textContent = target;
+  $('#statFocus').textContent = state.focusMinutes;
+  $('#todaySessions').textContent = state.sessionsToday;
+  $('#totalFocus').textContent = state.focusMinutes >= 60 ? Math.floor(state.focusMinutes/60) + ' h ' + pad(state.focusMinutes%60) : state.focusMinutes + ' min';
+  $('#ctaFocus').textContent = state.focusMinutes;
+}
+
+function renderAll(){
+  trackSelect.value = state.settings.track || 'gamma';
+  volumeSlider.value = state.settings.volume ?? 35;
+  $('#volValue').textContent = volumeSlider.value + ' %';
+  paintRange(volumeSlider);
+  Sound.setVolume(Number(volumeSlider.value) / 100);
+  $('#linkToTimer').checked = !!state.settings.linkToTimer;
+  renderQuotas(); updatePlanUI(); renderStreak(); renderMemo(); renderHistory(); renderStats(); renderTimer();
+}
+
+/* ================= UI : header, reveal, progress ================= */
+$('#btnLink').addEventListener('click', linkFile);
+$('#ctaLink').addEventListener('click', linkFile);
+$('#btnDownload').addEventListener('click', downloadCopy);
+$('#ctaDownload').addEventListener('click', downloadCopy);
+$('#bannerClose').addEventListener('click', () => $('#weekBanner').classList.remove('show'));
+$('#menuBtn').addEventListener('click', () => $('#mobileNav').classList.toggle('open'));
+$$('#mobileNav a').forEach(a => a.addEventListener('click', () => $('#mobileNav').classList.remove('open')));
+
+function onScroll(){
+  const h = document.documentElement, max = h.scrollHeight - h.clientHeight;
+  $('#scrollProgress').style.transform = 'scaleX(' + (max > 0 ? h.scrollTop / max : 0) + ')';
+  $('#top').classList.toggle('scrolled', h.scrollTop > 10);
+}
+window.addEventListener('scroll', onScroll, { passive:true });
+
+function initReveal(){
+  const els = $$('.reveal, .kin, .img-mask');
+  if(!('IntersectionObserver' in window)){ els.forEach(e => e.classList.add('in')); return; }
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => { if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, { threshold:.12, rootMargin:'0px 0px -40px 0px' });
+  els.forEach(e => io.observe(e));
+}
+
+/* ================= INIT ================= */
+$('#heroWeek').textContent = CURRENT_WEEK;
+$('#footWeek').textContent = CURRENT_WEEK;
+$('#ctaWeek').textContent = CURRENT_WEEK;
+$('#bannerWeek').textContent = CURRENT_WEEK;
+$('#year').textContent = new Date().getFullYear();
+
+renderQuotaCards();
+renderPlan();
+renderTipGrid();
+renderAll();
+showTimerTip(); showSpotTip();
+updateNow();
+setInterval(updateNow, 30000);
+setFileStatus();
+initReveal();
+onScroll();
+resizeViz(); drawViz();
+localMirror();
+
+if(weekRolled){
+  setTimeout(() => $('#weekBanner').classList.add('show'), 900);
+  setTimeout(() => $('#weekBanner').classList.remove('show'), 9000);
+  save();
+}
+tryRestoreFileHandle();
+
+document.addEventListener('visibilitychange', () => { if(!document.hidden){ if(T.running) tick(); updateNow(); } });
+window.addEventListener('beforeunload', () => localMirror());
+})();
+</script>
+</body>
+</html>
